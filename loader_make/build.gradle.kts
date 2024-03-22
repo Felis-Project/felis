@@ -4,9 +4,9 @@ plugins {
     kotlin("plugin.serialization") version "1.9.23"
 }
 
+val asmVersion = "9.5"
 group = "io.github.joemama"
 version = "1.0-ALPHA"
-val asmVersion = "9.5"
 
 repositories {
     mavenCentral()
@@ -20,6 +20,8 @@ dependencies {
 
     // For manifest parsing
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    implementation("org.benf:cfr:0.152")
 }
 
 gradlePlugin {

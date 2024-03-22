@@ -1,17 +1,66 @@
 package io.github.joemama.loader.make
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.gradle.api.Project
+import java.net.URI
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 
-class UnknownVersionException(version: String): IllegalArgumentException("Version $version could not be located in the version manifest")
+const val VERSION_MANIFEST: String = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+
+class Piston(private val project: Project) {
+    private val manifestFile = project.layout.buildDirectory.file("version_manifest_v2.json")
+    private val versionManifest: VersionManifest by lazy {
+        if (!this.manifestFile.get().asFile.exists()) {
+            LoaderMakePlugin.httpClient.sendAsync(
+                HttpRequest.newBuilder().GET().uri(URI.create(VERSION_MANIFEST)).build(),
+                HttpResponse.BodyHandlers.ofString()
+            ).thenApply(HttpResponse<String>::body).thenApply {
+                this.manifestFile.get().asFile.writeText(it)
+            }.join()
+        }
+        LoaderMakePlugin.json.decodeFromString(this.manifestFile.get().asFile.readText())
+    }
+
+    fun getVersion(version: String): VersionMeta {
+        val versionFile = this.project.layout.buildDirectory.file("$version.json")
+        if (!versionFile.get().asFile.exists()) {
+            val versionUrl = this.versionManifest[version].url
+            LoaderMakePlugin.httpClient.sendAsync(
+                HttpRequest.newBuilder(URI(versionUrl)).GET().build(),
+                HttpResponse.BodyHandlers.ofString()
+            ).thenApply(HttpResponse<String>::body).thenApply {
+                versionFile.get().asFile.writeText(it)
+            }.join()
+        }
+
+        return LoaderMakePlugin.json.decodeFromString<VersionMeta>(versionFile.get().asFile.readText())
+    }
+}
+
+class UnknownVersionException(version: String) :
+    IllegalArgumentException("Version $version could not be located in the version manifest")
 
 @Serializable
-data class VersionMeta(val libraries: List<Library>)
+data class VersionDownloads(
+    val client: DownloadItem,
+    @SerialName("client_mappings") val clientMappings: DownloadItem,
+    val server: DownloadItem,
+    @SerialName("server_mappings") val serverMappings: DownloadItem
+)
 
 @Serializable
-data class Library(val downloads: Downloads, val name: String)
+data class DownloadItem(val url: String /* size, sha1 */)
 
 @Serializable
-data class Downloads(val artifact: Artifact)
+data class VersionMeta(val libraries: List<Library>, val downloads: VersionDownloads)
+
+@Serializable
+data class Library(val downloads: LibraryDownloads, val name: String)
+
+@Serializable
+data class LibraryDownloads(val artifact: Artifact)
 
 // TODO: SHA-1 validation
 @Serializable
@@ -38,4 +87,4 @@ data class LatestVersion(val release: String, val snapshot: String)
 //     "complianceLevel": 1
 // }
 @Serializable
-data class Version(val id: String, val url: String, val sha1: String)
+data class Version(val id: String, val url: String /*val sha1: String*/)

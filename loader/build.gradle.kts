@@ -1,10 +1,6 @@
 plugins {
-    alias(libs.plugins.kotlin)
+    kotlin("jvm") version "1.9.23"
     id("io.github.joemama.loader.make")
-}
-
-repositories {
-    mavenCentral()
 }
 
 val asmVersion = "9.5"
