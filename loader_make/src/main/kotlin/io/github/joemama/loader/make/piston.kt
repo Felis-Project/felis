@@ -3,9 +3,6 @@ package io.github.joemama.loader.make
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.gradle.api.Project
-import java.net.URI
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 
 const val VERSION_MANIFEST: String = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
@@ -13,26 +10,16 @@ class Piston(private val project: Project) {
     private val manifestFile = project.layout.buildDirectory.file("version_manifest_v2.json")
     private val versionManifest: VersionManifest by lazy {
         if (!this.manifestFile.get().asFile.exists()) {
-            LoaderMakePlugin.httpClient.sendAsync(
-                HttpRequest.newBuilder().GET().uri(URI.create(VERSION_MANIFEST)).build(),
-                HttpResponse.BodyHandlers.ofString()
-            ).thenApply(HttpResponse<String>::body).thenApply {
-                this.manifestFile.get().asFile.writeText(it)
-            }.join()
+            fetchFile(VERSION_MANIFEST, this.manifestFile.get().asFile).join()
         }
         LoaderMakePlugin.json.decodeFromString(this.manifestFile.get().asFile.readText())
     }
 
     fun getVersion(version: String): VersionMeta {
+        val versionUrl = this.versionManifest[version].url
         val versionFile = this.project.layout.buildDirectory.file("$version.json")
         if (!versionFile.get().asFile.exists()) {
-            val versionUrl = this.versionManifest[version].url
-            LoaderMakePlugin.httpClient.sendAsync(
-                HttpRequest.newBuilder(URI(versionUrl)).GET().build(),
-                HttpResponse.BodyHandlers.ofString()
-            ).thenApply(HttpResponse<String>::body).thenApply {
-                versionFile.get().asFile.writeText(it)
-            }.join()
+            fetchFile(versionUrl, versionFile.get().asFile).join()
         }
 
         return LoaderMakePlugin.json.decodeFromString<VersionMeta>(versionFile.get().asFile.readText())

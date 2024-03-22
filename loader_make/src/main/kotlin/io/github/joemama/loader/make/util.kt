@@ -1,6 +1,5 @@
 package io.github.joemama.loader.make
 
-import org.gradle.api.artifacts.dsl.DependencyHandler
 import java.io.File
 import java.io.InputStream
 import java.net.URI
@@ -23,5 +22,3 @@ fun fetchFile(url: String, file: File): CompletableFuture<File> =
             file
         }
     }
-
-fun DependencyHandler.minecraft(notation: Any) = add("minecraft", "net.minecraft:minecraft:1.20.4")

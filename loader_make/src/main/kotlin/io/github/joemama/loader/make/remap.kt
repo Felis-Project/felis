@@ -126,16 +126,7 @@ class ProguardRemapper(mappings: File) : Remapper() {
         // we are not in our mappings if null
         val ownerClass = this.proguardMappings[owner] ?: return name
         // try to find in *this* class
-        val results = ownerClass.methods.filter { this.doesMethodMatch(it, name, descriptor) }
-        val newName = results.getOrNull(0)?.name
-        if (results.size > 1) {
-            val s = StringBuilder()
-            s.appendLine()
-            for (i in results) s.appendLine(i)
-            throw IllegalStateException("Method $name was found twice for class ${ownerClass.clazz.name}: $s")
-        }
-
-
+        val newName = ownerClass.methods.find { this.doesMethodMatch(it, name, descriptor) }?.name
         // if not null we found it here
         if (newName != null) return newName
 
@@ -189,13 +180,13 @@ class ProguardRemapper(mappings: File) : Remapper() {
 class JarRemapper(private val jarFile: File) {
     fun remap(mappings: File): Path {
         val jarPath = this.jarFile.parentFile.toPath().resolve(this.jarFile.nameWithoutExtension + "-sources.jar")
-         if (jarPath.exists()) return jarPath
+        if (jarPath.exists()) return jarPath
 
         val mapper = ProguardRemapper(mappings)
         val jarFile = JarFile(this.jarFile)
 
         // first pass, parse hierarchy info
-        for (entry in jarFile.entries().asSequence()) {
+        for (entry in jarFile.entries()) {
             // WARNING: Smoll(TM) possibly illegal hack to fix jar signing issues
             jarFile.getInputStream(entry).use { iS ->
                 // only classes may be remapped
@@ -217,7 +208,7 @@ class JarRemapper(private val jarFile: File) {
                 StandardOpenOption.CREATE
             )
         ).use { jar ->
-            for (entry in jarFile.entries().asSequence()) {
+            for (entry in jarFile.entries()) {
                 // WARNING: Smoll(TM) possibly illegal hack to fix jar signing issues
                 if (entry.name.endsWith(".SF") || entry.name.endsWith(".RSA")) continue
                 jarFile.getInputStream(entry).use {
