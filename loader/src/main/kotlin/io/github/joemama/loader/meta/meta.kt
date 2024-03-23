@@ -51,15 +51,30 @@ data class Mod(val jar: JarFile, val meta: ModMeta) {
     fun getContentUrl(name: String): URL = URI.create(this.url + name).toURL()
 }
 
-class ModDiscoverer(private val modDirPath: String) {
-    private val modDir = Paths.get(this.modDirPath).toFile()
+class ModDiscoverer(private val modPaths: String) {
+    private val modPathsSplit by lazy {
+        this.modPaths.split(":").map(String::trim).filterNot(String::isEmpty).map(Paths::get)
+    }
     val mods: List<Mod>
 
     init {
-        logger.info("mod discovery running in folder $modDirPath")
-        modDir.mkdirs()
-        this.mods = modDir.listFiles(FileFilter { !it.isDirectory() })?.mapNotNull { Mod.parse(it) }
-            ?: throw IllegalStateException("For some reason we got a null result")
+        logger.info("mod discovery running for files ${this.modPaths}")
+        val modList = mutableListOf<Mod>()
+
+        for (file in this.modPathsSplit.map { it.toFile() }) {
+            if (file.isDirectory()) {
+                file.mkdirs()
+                modList.addAll(
+                    file.listFiles(FileFilter { !it.isDirectory() })?.mapNotNull { Mod.parse(it) }
+                        ?: throw IllegalStateException("For some reason we got a null result")
+                )
+            } else {
+                Mod.parse(file)?.let { modList.add(it) }
+            }
+        }
+
+        this.mods = modList
+
         logger.info("discovered ${mods.size} mod files")
     }
 }
@@ -73,13 +88,14 @@ data class Transform(val name: String, val target: String, @SerialName("class") 
 @Serializable
 data class Mixin(val path: String)
 
+// TODO: Find what other info we should hold
 @Serializable
 data class ModMeta(
     val name: String,
     val version: String,
-    val description: String,
-    val entrypoints: List<Entrypoint>,
+    val description: String = "",
+    val entrypoints: List<Entrypoint> = listOf(),
     val modid: String,
-    val transforms: List<Transform>,
-    val mixins: List<Mixin>
+    val transforms: List<Transform> = listOf(),
+    val mixins: List<Mixin> = listOf()
 )

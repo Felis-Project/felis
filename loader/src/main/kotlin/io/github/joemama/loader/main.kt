@@ -1,6 +1,7 @@
 package io.github.joemama.loader
 
 import io.github.joemama.loader.meta.ModDiscoverer
+import io.github.joemama.loader.mixin.MixinLoaderPlugin
 import org.slf4j.LoggerFactory
 
 import java.net.URL
@@ -11,8 +12,6 @@ import java.lang.invoke.MethodType
 import java.lang.invoke.MethodHandles
 
 import io.github.joemama.loader.transformer.TransformingClassLoader
-import io.github.joemama.loader.mixin.Mixin
-import io.github.joemama.loader.mixin.MixinTransformation
 import io.github.joemama.loader.transformer.Transformation
 import io.github.joemama.loader.transformer.Transformer
 import org.objectweb.asm.Opcodes
@@ -138,14 +137,14 @@ object ModLoader {
 
         this.transformer = Transformer()
 
-        // TODO: Move to a loader plugin once we have those properly implemented
-        Mixin.initMixins()
         this.transformer.apply {
-            registerInternal(MixinTransformation)
             registerInternal(DebugTransformation)
         }
 
-        this.callEntrypoint("loader_start", LoaderPluginEntrypoint::onLoaderInit)
+        // TODO: Hardcoded for now
+        MixinLoaderPlugin().onLoaderInit()
+
+        this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
     }
 
     fun start(owner: String, method: String, desc: String, params: Array<String>) {

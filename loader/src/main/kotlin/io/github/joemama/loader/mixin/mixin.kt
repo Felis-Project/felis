@@ -1,5 +1,6 @@
 package io.github.joemama.loader.mixin
 
+import io.github.joemama.loader.LoaderPluginEntrypoint
 import io.github.joemama.loader.ModLoader
 import io.github.joemama.loader.transformer.Transformation
 import org.objectweb.asm.tree.ClassNode
@@ -28,7 +29,7 @@ object MixinTransformation : Transformation {
     }
 }
 
-class MixinLogger : LoggerAdapterAbstract("mixin") {
+class MixinLogger : LoggerAdapterAbstract("io/github/joemama/loader/mixin") {
     private val logger = LoggerFactory.getLogger(Mixin::class.java)
     private fun matchLevel(level: org.spongepowered.asm.logging.Level): Level = when (level) {
         org.spongepowered.asm.logging.Level.DEBUG -> Level.DEBUG
@@ -165,5 +166,13 @@ class GlobalPropertyService : IGlobalPropertyService {
 
     override fun setProperty(key: IPropertyKey, value: Any?) {
         this.props[(key as PropertyKey).key] = value
+    }
+}
+
+@Suppress("unused")
+class MixinLoaderPlugin: LoaderPluginEntrypoint {
+    override fun onLoaderInit() {
+        Mixin.initMixins()
+        ModLoader.transformer.registerInternal(MixinTransformation)
     }
 }

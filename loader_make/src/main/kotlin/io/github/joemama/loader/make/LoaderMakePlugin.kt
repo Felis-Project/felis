@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
+import java.io.File
 import java.net.http.HttpClient
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -43,20 +44,28 @@ class LoaderMakePlugin : Plugin<Project> {
         val modLoader = project.configurations.create("modLoader") {
             it.isCanBeResolved = true
         }
-        project.configurations.getByName("implementation").extendsFrom(mcLibs, modLoader)
+        val modImplementation = project.configurations.create("modImplementation") {
+            it.isCanBeResolved = true
+            it.isTransitive = false
+        }
+        project.configurations.getByName("implementation").extendsFrom(mcLibs, modLoader, modImplementation)
 
         piston = Piston(project)
         LibraryFetcher(project, "1.20.4").includeLibs()
         val gameJars = GameJars(project, "1.20.4").prepare()
 
-        project.tasks.register("runGame", JavaExec::class.java) {
+        project.tasks.register("runGame", JavaExec::class.java) { it ->
             it.dependsOn("build")
             it.group = "minecraft"
             it.mainClass.set("io.github.joemama.loader.MainKt")
             it.classpath = mcLibs + modLoader
 
+            val modFiles = mutableSetOf<File>()
+            modFiles.addAll(modImplementation.files)
+            modFiles.add(project.layout.buildDirectory.files("libs").singleFile)
+            val modPaths = modFiles.joinToString(separator = ":") { it.path }
             it.args(
-                "--mods", project.layout.buildDirectory.files("libs").asPath,
+                "--mods", modPaths,
                 "--source", gameJars.client.path,
                 "--accessToken", "0",
                 "--version", "1.20.4-JoeLoader",
