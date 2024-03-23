@@ -1,6 +1,15 @@
 plugins {
     kotlin("jvm") version "1.9.23"
     id("io.github.joemama.loader.make")
+    kotlin("plugin.serialization") version "1.9.23"
+}
+
+repositories {
+    maven {
+        url = uri("https://repo.spongepowered.org/repository/maven-public/")
+        name = "Sponge"
+    }
+
 }
 
 val asmVersion = "9.5"
@@ -12,4 +21,6 @@ dependencies {
     implementation("org.ow2.asm:asm-tree:$asmVersion")
     // For metadata parsing
     implementation("com.akuleshov7:ktoml-core:0.5.1")
+    // Mixin TODO: Move this to a loader plugin
+    implementation("org.spongepowered:mixin:0.8.5")
 }

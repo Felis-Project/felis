@@ -28,11 +28,12 @@ class GameJars(private val project: Project, private val versionId: String) {
         dir
     }
 
-    fun prepare() {
+    fun prepare(): Jars {
         val jars = fetchJars()
         val mapped = remapJars(jars)
 
         this.project.dependencies.add("compileOnly", this.project.files(mapped.client))
+        return mapped
     }
 
     private fun fetchJars(): Jars {

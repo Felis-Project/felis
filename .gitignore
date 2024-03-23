@@ -9,4 +9,5 @@
 /.idea/
 
 # mc run dir
-/run/
+*/run/
+
