@@ -1,0 +1,16 @@
+name="Testmod"
+version = "1.0.0"
+description = "My mod"
+modid = "mymod"
+
+[[transforms]]
+name = "bootstrap transformation for common entrypoint"
+class = "io.github.joemama.loader.api.BootstrapTransformation"
+target = "net.minecraft.server.Bootstrap"
+
+[[entrypoints]]
+id = "common"
+class = "io.github.joemama.loader.api.Test"
+
+[[mixins]]
+path = "mymod.mixins.json"

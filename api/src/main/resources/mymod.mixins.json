@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.github.joemama.loader.api.mixins",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "MixinClientBrandRetriever",
+    "MixinMain"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

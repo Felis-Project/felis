@@ -30,6 +30,10 @@ class LoaderMakePlugin : Plugin<Project> {
 
         project.repositories.apply {
             mavenCentral()
+            maven {
+                it.url = project.uri("https://repo.spongepowered.org/repository/maven-public/")
+                it.name = "Sponge"
+            }
         }
 
         project.plugins.apply {
