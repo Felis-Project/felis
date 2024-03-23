@@ -179,9 +179,10 @@ class ProguardRemapper(mappings: File) : Remapper() {
 
 class JarRemapper(private val jarFile: File) {
     fun remap(mappings: File): Path {
-        val jarPath = this.jarFile.parentFile.toPath().resolve(this.jarFile.nameWithoutExtension + "-sources.jar")
+        val jarPath = this.jarFile.parentFile.toPath().resolve(this.jarFile.nameWithoutExtension + "-remapped.jar")
         if (jarPath.exists()) return jarPath
 
+        println("Remapping ${jarFile.path} using ${mappings.path}")
         val mapper = ProguardRemapper(mappings)
         val jarFile = JarFile(this.jarFile)
 

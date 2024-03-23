@@ -1,10 +1,10 @@
 plugins {
-    id("io.github.joemama.loader.make")
     kotlin("jvm")
+    id("io.github.joemama.loader.make")
 }
 
 val asmVersion = "9.5"
 
 dependencies {
-    implementation(project(":loader"))
+    modLoader(project(":loader"))
 }

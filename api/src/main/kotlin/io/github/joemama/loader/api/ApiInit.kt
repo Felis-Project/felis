@@ -15,6 +15,5 @@ val logger: Logger = LoggerFactory.getLogger("Loader API")
 @Suppress("unused")
 fun apiInit() {
     ModLoader.callEntrypoint("common", CommonEntrypoint::onInit)
-    net.minecraft.client.main.Main.main(arrayOf())
 }
 

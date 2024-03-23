@@ -1,9 +1,9 @@
 package io.github.joemama.loader.meta
 
-import com.akuleshov7.ktoml.Toml
-import com.akuleshov7.ktoml.exceptions.TomlDecodingException
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
+import net.peanuuutz.tomlkt.Toml
 import org.slf4j.LoggerFactory
 
 import java.io.File
@@ -29,7 +29,7 @@ data class Mod(val jar: JarFile, val meta: ModMeta) {
             try {
                 val meta = Toml.decodeFromString<ModMeta>(metaToml)
                 Mod(modJar, meta)
-            } catch (e: TomlDecodingException) {
+            } catch (e: Exception) {
                 logger.error("File ${file.name} had a malformatted mods.toml file")
                 e.printStackTrace()
                 null
@@ -65,10 +65,10 @@ class ModDiscoverer(private val modDirPath: String) {
 }
 
 @Serializable
-data class Entrypoint(val id: String, val clazz: String)
+data class Entrypoint(val id: String, @SerialName("class") val clazz: String)
 
 @Serializable
-data class Transform(val name: String, val target: String, val clazz: String)
+data class Transform(val name: String, val target: String, @SerialName("class") val clazz: String)
 
 @Serializable
 data class Mixin(val path: String)

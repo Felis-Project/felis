@@ -34,10 +34,8 @@ class LibraryFetcher(private val project: Project, private val version: String) 
     fun includeLibs() {
         this.downloadLibs()
 
-        this.project.configurations.maybeCreate("implementation")
-        this.project.dependencies.add(
-            "implementation",
-            this.project.files(this.librariesRoot.asFileTree.map { it.path })
-        )
+        this.project.dependencies.apply {
+            add("minecraftLibrary", project.files(librariesRoot.asFileTree.map { it.path }))
+        }
     }
 }

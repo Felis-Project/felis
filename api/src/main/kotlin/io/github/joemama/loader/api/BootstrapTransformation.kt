@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 
 class BootstrapTransformation : Transformation {
     private val logger = LoggerFactory.getLogger(BootstrapTransformation::class.java)
-
     // ======================== Code from Bootstrap=======================
     // public static void bootStrap() {
     //     if (isBootstrapped) {
@@ -40,7 +39,7 @@ class BootstrapTransformation : Transformation {
     // }
     override fun transform(clazz: ClassNode, name: String) {
         val mn = clazz.methods.first { it.name == "bootStrap" && it.desc == "()V" }
-        val insn = mn.instructions.find { insn ->
+        val insn = mn.instructions.first { insn ->
             if (insn.type != AbstractInsnNode.METHOD_INSN) {
                 false
             } else {
