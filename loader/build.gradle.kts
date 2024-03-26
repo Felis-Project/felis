@@ -12,6 +12,7 @@ dependencies {
     api("org.ow2.asm:asm-util:$asmVersion")
     // For metadata parsing
     implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
-    // Mixin TODO: Move this to a loader plugin
+    // Mixin for MixinClassWriter for now + mixin functionality
+    // TODO: Move this to a loader plugin
     api("org.spongepowered:mixin:0.8.5")
 }

@@ -41,7 +41,7 @@ data class VersionDownloads(
 data class DownloadItem(val url: String /* size, sha1 */)
 
 @Serializable
-data class VersionMeta(val libraries: List<Library>, val downloads: VersionDownloads)
+data class VersionMeta(val libraries: List<Library>, val downloads: VersionDownloads, val assetIndex: AssetIndexMeta)
 
 @Serializable
 data class Library(val downloads: LibraryDownloads, val name: String)
@@ -75,3 +75,21 @@ data class LatestVersion(val release: String, val snapshot: String)
 // }
 @Serializable
 data class Version(val id: String, val url: String /*val sha1: String*/)
+
+@Serializable
+data class AssetIndexMeta(val id: String, val url: String /*sha1, size, totalSize*/)
+
+@Serializable
+data class AssetIndex(val objects: Map<String, AssetObject>)
+
+const val RESOURCES_URL = "https://resources.download.minecraft.net/"
+
+@Serializable
+data class AssetObject(val hash: String, val size: ULong) {
+    val url by lazy {
+        RESOURCES_URL + this.path
+    }
+    val path by lazy {
+        hash.substring(0..1) + "/" + hash
+    }
+}

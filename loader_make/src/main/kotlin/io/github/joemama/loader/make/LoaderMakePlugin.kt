@@ -54,8 +54,20 @@ class LoaderMakePlugin : Plugin<Project> {
         LibraryFetcher(project, "1.20.4").includeLibs()
         val gameJars = GameJars(project, "1.20.4").prepare()
 
+        val downloadAssetsTask = project.tasks.register("downloadAssets", DownloadAssetsTask::class.java) {
+            it.group = "minecraft"
+            it.version.set("1.20.4")
+            it.assetDir.set(
+                project.gradle.gradleUserHomeDir
+                    .resolve("caches")
+                    .resolve("loader-make")
+                    .resolve("assets")
+                    .apply { mkdirs() }
+            )
+        }
+
         project.tasks.register("runGame", JavaExec::class.java) { it ->
-            it.dependsOn("build")
+            it.dependsOn("build", "downloadAssets")
             it.group = "minecraft"
             it.mainClass.set("io.github.joemama.loader.MainKt")
             it.classpath = mcLibs + modLoader
@@ -69,7 +81,9 @@ class LoaderMakePlugin : Plugin<Project> {
                 "--source", gameJars.client.path,
                 "--accessToken", "0",
                 "--version", "1.20.4-JoeLoader",
-                "--gameDir", "run"
+                "--gameDir", "run",
+                "--assetsDir", downloadAssetsTask.get().assetDir.get().asFile.path,
+                "--assetIndex", piston.getVersion("1.20.4").assetIndex.id
             )
         }
         project.tasks.register("genSources", GenSourcesTask::class.java) {

@@ -169,7 +169,6 @@ class GlobalPropertyService : IGlobalPropertyService {
     }
 }
 
-@Suppress("unused")
 class MixinLoaderPlugin: LoaderPluginEntrypoint {
     override fun onLoaderInit() {
         Mixin.initMixins()
