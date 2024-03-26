@@ -17,3 +17,4 @@ dependencies {
     // TODO: Move this to a loader plugin
     api("org.spongepowered:mixin:0.8.5")
 }
+
