@@ -1,9 +1,22 @@
 plugins {
     kotlin("jvm")
-    id("io.github.joemama.loader.make")
+    id("loader-make")
     `maven-publish`
 }
 
 dependencies {
     modLoader(project(":loader"))
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "Github"
+            url = uri("https://maven.pkg.github.com/0xJoeMama/ModLoader")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
 }

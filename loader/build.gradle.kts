@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    id("io.github.joemama.loader.make")
+    id("loader-make")
     kotlin("plugin.serialization") version "1.9.23"
     `maven-publish`
 }
@@ -18,3 +18,15 @@ dependencies {
     api("org.spongepowered:mixin:0.8.5")
 }
 
+publishing {
+    repositories {
+        maven {
+            name = "Github"
+            url = uri("https://maven.pkg.github.com/0xJoeMama/ModLoader")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}

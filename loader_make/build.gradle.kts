@@ -27,7 +27,7 @@ dependencies {
 
 gradlePlugin {
     plugins.create("loader_make") {
-        id = "io.github.joemama.loader.make"
+        id = "loader-make"
         implementationClass = "io.github.joemama.loader.make.LoaderMakePlugin"
     }
 }
