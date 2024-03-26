@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--yoinked from https://github.com/FabricMC/fabric-loom/ -->
+<Configuration status="WARN" packages="com.mojang.util,net.minecrell.terminalconsole.util">
+    <Appenders>
+        <!--	System out	-->
+        <Console name="SysOut" target="SYSTEM_OUT">
+            <!-- Filter out the authentication errors when starting in development -->
+            <Filters>
+                <RegexFilter regex="^Failed to verify authentication$" onMatch="DENY" onMismatch="NEUTRAL"/>
+                <RegexFilter regex="^Failed to fetch user properties$" onMatch="DENY" onMismatch="NEUTRAL"/>
+                <RegexFilter regex="^Couldn't connect to realms$" onMatch="DENY" onMismatch="NEUTRAL"/>
+                <RegexFilter regex="^Error while loading the narrator$" onMatch="DENY" onMismatch="NEUTRAL"/>
+            </Filters>
+            <!--    apply formatting-->
+            <PatternLayout
+                    pattern="%style{[%d{HH:mm:ss}]}{blue} %highlight{[%t/%level]}{FATAL=red, ERROR=red, WARN=yellow, INFO=green, DEBUG=green, TRACE=blue} %style{(%logger{1})}{cyan} %highlight{%msg%n}{FATAL=red, ERROR=red, WARN=normal, INFO=normal, DEBUG=normal, TRACE=normal}">
+            </PatternLayout>
+        </Console>
+
+        <!--	Vanilla server gui	-->
+        <Queue name="ServerGuiConsole" ignoreExceptions="true">
+            <PatternLayout pattern="[%d{HH:mm:ss} %level] (%logger{1}) %msg{nolookups}%n"/>
+        </Queue>
+
+        <!--	latest.log same as vanilla	-->
+        <RollingRandomAccessFile name="LatestFile" fileName="run/logs/latest.log"
+                                 filePattern="run/logs/%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level] (%logger{1}) %msg{nolookups}%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <OnStartupTriggeringPolicy/>
+            </Policies>
+        </RollingRandomAccessFile>
+
+        <!--	Debug log file	-->
+        <RollingRandomAccessFile name="DebugFile" fileName="run/logs/debug.log" filePattern="run/logs/debug-%i.log.gz">
+            <PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level] (%logger) %msg{nolookups}%n"/>
+            <DefaultRolloverStrategy max="2" fileIndex="min"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+                <OnStartupTriggeringPolicy/>
+            </Policies>
+        </RollingRandomAccessFile>
+    </Appenders>
+    <Loggers>
+        <Logger level="${sys:loader.log.level:-info}" name="net.minecraft"/>
+        <Root level="all">
+            <AppenderRef ref="DebugFile" level="${sys:loader.log.debug.level:-debug}"/>
+            <AppenderRef ref="SysOut" level="${sys:loader.log.level:-info}"/>
+            <AppenderRef ref="LatestFile" level="${sys:loader.log.level:-info}"/>
+            <AppenderRef ref="ServerGuiConsole" level="${sys:loader.log.level:-info}"/>
+        </Root>
+    </Loggers>
+</Configuration>

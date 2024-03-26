@@ -89,6 +89,7 @@ object ModLoader {
         private set
     lateinit var transformer: Transformer
         private set
+    private var debugTransformer: Boolean = false
 
     internal fun parseArgs(args: Array<String>): Array<String> {
         var gameJarPath: String? = null
@@ -116,6 +117,10 @@ object ModLoader {
                     i++
                 }
 
+                "--debug-t" -> {
+                    this.debugTransformer = true
+                }
+
                 else -> {
                     newArgs.add(args[i])
                 }
@@ -138,7 +143,9 @@ object ModLoader {
         this.transformer = Transformer()
 
         this.transformer.apply {
-            registerInternal(DebugTransformation)
+            if (this@ModLoader.debugTransformer) {
+                registerInternal(DebugTransformation)
+            }
         }
 
         // TODO: Hardcoded for now

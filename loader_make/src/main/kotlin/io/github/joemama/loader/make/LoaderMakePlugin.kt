@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
+import org.gradle.jvm.tasks.Jar
 import java.io.File
 import java.net.http.HttpClient
 import java.util.concurrent.ExecutorService
@@ -67,6 +68,17 @@ class LoaderMakePlugin : Plugin<Project> {
         }
 
         project.tasks.register("runGame", JavaExec::class.java) { it ->
+            val loggerCfgFile = project.layout.buildDirectory.file("log4j2.xml")
+            it.doFirst {
+                loggerCfgFile.get().asFile.apply {
+                    if (!exists()) {
+                        parentFile.mkdirs()
+                        this.javaClass.classLoader.getResourceAsStream("log4j2.xml")?.readAllBytes()?.let {
+                            writeBytes(it)
+                        }
+                    }
+                }
+            }
             it.dependsOn("build", "downloadAssets")
             it.group = "minecraft"
             it.mainClass.set("io.github.joemama.loader.MainKt")
@@ -76,6 +88,9 @@ class LoaderMakePlugin : Plugin<Project> {
             modFiles.addAll(modImplementation.files)
             modFiles.add(project.layout.buildDirectory.files("libs").singleFile)
             val modPaths = modFiles.joinToString(separator = ":") { it.path }
+            it.jvmArgs(
+                "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"
+            )
             it.args(
                 "--mods", modPaths,
                 "--source", gameJars.client.path,
@@ -86,10 +101,21 @@ class LoaderMakePlugin : Plugin<Project> {
                 "--assetIndex", piston.getVersion("1.20.4").assetIndex.id
             )
         }
+
         project.tasks.register("genSources", GenSourcesTask::class.java) {
             it.group = "minecraft"
             it.inputJar.set(gameJars.client)
             it.outputJar.set(gameJars.client.parentFile.resolve(gameJars.client.nameWithoutExtension + "-sources"))
+        }
+        project.tasks.withType(Jar::class.java) { jar ->
+            val refmap = project.layout.buildDirectory.file("mixin.refmap.json")
+            jar.doFirst {
+                refmap.map { it.asFile }.get().apply {
+                    createNewFile()
+                    writeText("{}\n")
+                }
+            }
+            jar.from(refmap)
         }
     }
 }
