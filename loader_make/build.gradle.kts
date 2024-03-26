@@ -2,6 +2,7 @@ plugins {
     `java-gradle-plugin`
     kotlin("jvm") version "1.9.23"
     kotlin("plugin.serialization") version "1.9.23"
+    `maven-publish`
 }
 
 val asmVersion = "9.5"
@@ -26,5 +27,18 @@ gradlePlugin {
     plugins.create("loader_make") {
         id = "io.github.joemama.loader.make"
         implementationClass = "io.github.joemama.loader.make.LoaderMakePlugin"
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "Github"
+            url = uri("https://maven.pkg.github.com/0xJoeMama/ModLoader")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 }
