@@ -2,6 +2,7 @@ package io.github.joemama.loader.mixin
 
 import io.github.joemama.loader.LoaderPluginEntrypoint
 import io.github.joemama.loader.ModLoader
+import io.github.joemama.loader.transformer.ClassData
 import io.github.joemama.loader.transformer.Transformation
 import org.objectweb.asm.tree.ClassNode
 import org.slf4j.LoggerFactory
@@ -22,10 +23,9 @@ import java.io.InputStream
 import java.net.URL
 
 object MixinTransformation : Transformation {
-    override fun transform(clazz: ClassNode, name: String) {
-        if (Mixin.transformer.transformClass(Mixin.environment, name, clazz)) {
-            ModLoader.logger.debug("transformed {} with mixin", clazz.name)
-        }
+    override fun transform(classData: ClassData) {
+        // TODO: DO NOT PARSE ALL CLASSES JEEZ
+        Mixin.transformer.transformClass(Mixin.environment, classData.name, classData.node)
     }
 }
 
@@ -129,7 +129,7 @@ class Mixin : IMixinService, IClassProvider, IClassBytecodeProvider, ITransforme
 
     // runTransformers means nothing in our case since we always run transformers before Mixin application
     override fun getClassNode(name: String, runTransformers: Boolean): ClassNode? =
-        ModLoader.classLoader.getClassNode(name)
+        ModLoader.classLoader.getClassData(name)?.node
 
     override fun getTransformers(): Collection<ITransformer> = listOf()
     override fun getDelegatedTransformers(): Collection<ITransformer> = listOf()
@@ -169,7 +169,7 @@ class GlobalPropertyService : IGlobalPropertyService {
     }
 }
 
-class MixinLoaderPlugin: LoaderPluginEntrypoint {
+class MixinLoaderPlugin : LoaderPluginEntrypoint {
     override fun onLoaderInit() {
         Mixin.initMixins()
         ModLoader.transformer.registerInternal(MixinTransformation)

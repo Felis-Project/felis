@@ -2,6 +2,7 @@ package io.github.joemama.loader
 
 import io.github.joemama.loader.meta.ModDiscoverer
 import io.github.joemama.loader.mixin.MixinLoaderPlugin
+import io.github.joemama.loader.transformer.ClassData
 import org.slf4j.LoggerFactory
 
 import java.net.URL
@@ -16,19 +17,20 @@ import io.github.joemama.loader.transformer.Transformation
 import io.github.joemama.loader.transformer.Transformer
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
-import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.slf4j.Logger
 import java.io.PrintStream
+import java.util.jar.JarFile
 
 interface LoaderPluginEntrypoint {
     fun onLoaderInit()
 }
 
 data class GameJar(val jarLoc: Path) {
+    val jarFile: JarFile = JarFile(jarLoc.toFile())
     private val absolutePath by lazy { this.jarLoc.toAbsolutePath() }
     private val jarUri: String by lazy {
         URI.create("jar:${this.absolutePath.toUri().toURL()}!/").toString()
@@ -39,8 +41,9 @@ data class GameJar(val jarLoc: Path) {
 
 object DebugTransformation : Transformation {
     private val logger = LoggerFactory.getLogger(DebugTransformation::class.java)
-    override fun transform(clazz: ClassNode, name: String) {
-        if (name == "net.minecraft.client.main.Main") {
+    override fun transform(classData: ClassData) {
+        if (classData.name == "net.minecraft.client.main.Main") {
+            val clazz = classData.node
             this.logger.info("Transforming $clazz with DebugTransformation")
             val mainMethod = clazz.methods.first {
                 it.name == "main" && it.desc == Type.getMethodDescriptor(
@@ -78,7 +81,7 @@ object DebugTransformation : Transformation {
 }
 
 object ModLoader {
-    val logger: Logger = LoggerFactory.getLogger(ModLoader.javaClass)
+    val logger: Logger = LoggerFactory.getLogger(ModLoader::class.java)
     private lateinit var modDir: String
     private lateinit var gameJarPath: String
     lateinit var discoverer: ModDiscoverer

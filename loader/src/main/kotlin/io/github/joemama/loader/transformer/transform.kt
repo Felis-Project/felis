@@ -9,12 +9,16 @@ import org.objectweb.asm.tree.ClassNode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.spongepowered.asm.transformers.MixinClassWriter
+import java.io.InputStream
 import java.net.JarURLConnection
 import java.net.URL
 import java.util.*
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.measureTime
 
 interface Transformation {
-    fun transform(clazz: ClassNode, name: String)
+    fun transform(classData: ClassData)
 }
 
 data class SimpleTransformation(
@@ -23,7 +27,7 @@ data class SimpleTransformation(
 ) : Transformation by transformation
 
 class Transformer : Transformation {
-    private val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
+    val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
     private val external: Multimap<String, Lazy<SimpleTransformation>> = MultimapBuilder.ListMultimapBuilder
         .hashKeys()
         .arrayListValues()
@@ -50,16 +54,17 @@ class Transformer : Transformation {
         this.internal.add(t)
     }
 
-    override fun transform(clazz: ClassNode, name: String) {
+    override fun transform(classData: ClassData) {
+        val name = classData.name
         if (this.external.containsKey(name)) {
             for (t in this.external.get(name)) {
                 this.logger.info("transforming $name with ${t.value.transformationName}")
-                t.value.transform(clazz, name)
+                t.value.transform(classData)
             }
         }
 
         for (t in this.internal) {
-            t.transform(clazz, name)
+            t.transform(classData)
         }
     }
 }
@@ -74,35 +79,42 @@ class Transformer : Transformation {
  */
 class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     private val logger: Logger = LoggerFactory.getLogger(TransformingClassLoader::class.java)
+    private val classLoadPerfCounter = PerfCounter("Loaded {} class data in {}s, Average load time {}ms")
+    private val transformationPerfCounter =
+        PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms")
 
-    fun getClassNode(name: String): ClassNode? {
+    fun getClassData(name: String): ClassData? {
         val normalName = name.replace(".", "/") + ".class"
         // getResourceAsStream since mixins require system resources as well
-        return this.getResourceAsStream(normalName)?.use {
-            val classReader = ClassReader(it)
-            val classNode = ClassNode()
-            classReader.accept(classNode, ClassReader.EXPAND_FRAMES)
-            classNode
+        return this.getResourceAsStream(normalName)?.use { ClassData(it.readAllBytes(), name) }
+    }
+
+    override fun getResourceAsStream(name: String): InputStream? {
+        val oldRes = super.getResourceAsStream(name)
+        if (oldRes != null) return oldRes
+
+        val mcRes = ModLoader.gameJar.jarFile.getJarEntry(name)
+        if (mcRes != null) return ModLoader.gameJar.jarFile.getInputStream(mcRes)
+
+        for (mod in ModLoader.discoverer.mods) {
+            val entry = mod.jar.getJarEntry(name) ?: continue
+            return mod.jar.getInputStream(entry)
         }
+
+        return null
     }
 
     // we are given a class that parent loaders couldn't load. It's our turn to load it using the gameJar
     public override fun findClass(name: String): Class<*>? {
         synchronized(this.getClassLoadingLock(name)) {
-            val classNode = this.getClassNode(name)
-
+            val classData = this.classLoadPerfCounter.timed { this.getClassData(name) }
             // TODO: optimize the parsing of every loaded class
-            if (classNode != null) {
-                ModLoader.transformer.transform(classNode, name)
-
-                // MixinClassWriter properly implements getCommonSuperClass without loading the class (used by COMPUTE_FRAMES)
-                // We may need to do that the same using ASM metadata. For now just using Mixin's implementation
-                val classWriter = MixinClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
-                classNode.accept(classWriter)
-
-                return classWriter.toByteArray().let {
-                    this.defineClass(name, it, 0, it.size)
+            if (classData != null) {
+                val bytes = this.transformationPerfCounter.timed {
+                    ModLoader.transformer.transform(classData)
+                    classData.bytes
                 }
+                return this.defineClass(name, bytes, 0, bytes.size)
             }
         }
 
@@ -161,3 +173,71 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     }
 }
 
+class ClassData(initialBytes: ByteArray, val name: String) {
+    private var internalBytes: ByteArray? = initialBytes
+        get() {
+            if (field != null) return field
+            val writer = MixinClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
+            this.internalNode!!.accept(writer)
+            this.internalNode = null
+            return writer.toByteArray()
+        }
+    private var internalNode: ClassNode? = null
+        get() {
+            if (field != null) return field
+            val reader = ClassReader(this.internalBytes!!)
+            field = ClassNode()
+            reader.accept(field, ClassReader.EXPAND_FRAMES)
+            this.internalBytes = null
+            return field
+        }
+
+    var bytes
+        get() = this.internalBytes!!
+        set(bytes) {
+            this.internalBytes = bytes
+        }
+    val node
+        get() = this.internalNode!!
+}
+
+// message should have the following form: <text> {}(becomes action count) <text> {}(becomes total time in seconds) <text> {}(becomes average time in milliseconds)
+class PerfCounter(private val message: String) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(PerfCounter::class.java)
+        private val counters: MutableList<PerfCounter> = mutableListOf()
+        private val shutdownThread = Thread {
+            this.counters.forEach(PerfCounter::printSummary)
+        }
+
+        init {
+            Runtime.getRuntime().addShutdownHook(this.shutdownThread)
+        }
+    }
+
+    init {
+        counters.add(this)
+    }
+
+    var totalDuration: Duration = Duration.ZERO
+    var actionCount = 0
+
+    inline fun <T> timed(action: () -> T): T {
+        var res: T
+        this.totalDuration += measureTime {
+            res = action()
+        }
+        this.actionCount++
+        return res
+    }
+
+    fun printSummary() {
+        if (actionCount > 0) {
+            val total = this.totalDuration.toDouble(DurationUnit.SECONDS)
+            val avg = this.totalDuration.toDouble(DurationUnit.MILLISECONDS) / this.actionCount.toDouble()
+            logger.info(message, this.actionCount, total, avg)
+        } else {
+            logger.error("Not enough actions occured.")
+        }
+    }
+}

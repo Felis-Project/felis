@@ -2,6 +2,7 @@ package io.github.joemama.loader.make
 
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.ClassRemapper
+import org.objectweb.asm.commons.MethodRemapper
 import org.objectweb.asm.commons.Remapper
 import java.io.File
 import java.nio.file.Path
@@ -177,6 +178,28 @@ class ProguardRemapper(mappings: File) : Remapper() {
     }
 }
 
+class VariableRenamingMethodVisitor(visitor: MethodVisitor, remapper: Remapper) : MethodRemapper(visitor, remapper) {
+    private var internalParameterCount = 0
+    private var internalVariableCount = 0
+    override fun visitParameter(name: String, access: Int) =
+        super.visitParameter("p${this.internalParameterCount++}", access)
+
+    override fun visitLocalVariable(
+        name: String,
+        descriptor: String,
+        signature: String?,
+        start: Label,
+        end: Label,
+        index: Int
+    ) = super.visitLocalVariable("v${this.internalVariableCount++}", descriptor, signature, start, end, index)
+}
+
+class LoaderMakeClassRemapper(visitor: ClassVisitor, remapper: Remapper) : ClassRemapper(visitor, remapper) {
+    override fun createMethodRemapper(methodVisitor: MethodVisitor): MethodVisitor {
+        return VariableRenamingMethodVisitor(methodVisitor, this.remapper)
+    }
+}
+
 class JarRemapper(private val jarFile: File) {
     fun remap(mappings: File): Path {
         val jarPath = this.jarFile.parentFile.toPath().resolve(this.jarFile.nameWithoutExtension + "-remapped.jar")
@@ -217,7 +240,7 @@ class JarRemapper(private val jarFile: File) {
                     if (entry.name.endsWith(".class")) {
                         val reader = ClassReader(it)
                         val writer = ClassWriter(0)
-                        val remapper = ClassRemapper(writer, mapper)
+                        val remapper = LoaderMakeClassRemapper(writer, mapper)
                         reader.accept(remapper, 0)
 
                         val path = mapper.map(reader.className).replace(".", "/") + ".class"
