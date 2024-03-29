@@ -27,7 +27,7 @@ data class SimpleTransformation(
 ) : Transformation by transformation
 
 class Transformer : Transformation {
-    val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
     private val external: Multimap<String, Lazy<SimpleTransformation>> = MultimapBuilder.ListMultimapBuilder
         .hashKeys()
         .arrayListValues()
@@ -90,9 +90,6 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     }
 
     override fun getResourceAsStream(name: String): InputStream? {
-        val oldRes = super.getResourceAsStream(name)
-        if (oldRes != null) return oldRes
-
         val mcRes = ModLoader.gameJar.jarFile.getJarEntry(name)
         if (mcRes != null) return ModLoader.gameJar.jarFile.getInputStream(mcRes)
 
@@ -101,7 +98,7 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
             return mod.jar.getInputStream(entry)
         }
 
-        return null
+        return super.getResourceAsStream(name)
     }
 
     // we are given a class that parent loaders couldn't load. It's our turn to load it using the gameJar
@@ -211,6 +208,7 @@ class PerfCounter(private val message: String) {
         }
 
         init {
+            shutdownThread.name = "Waiter"
             Runtime.getRuntime().addShutdownHook(this.shutdownThread)
         }
     }
