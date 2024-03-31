@@ -81,7 +81,7 @@ object DebugTransformation : Transformation {
 }
 
 object ModLoader {
-    val logger: Logger = LoggerFactory.getLogger(ModLoader::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(ModLoader::class.java)
     private lateinit var modDir: String
     private lateinit var gameJarPath: String
     lateinit var discoverer: ModDiscoverer
@@ -94,7 +94,7 @@ object ModLoader {
         private set
     private var debugTransformer: Boolean = false
 
-    internal fun parseArgs(args: Array<String>): Array<String> {
+    fun parseArgs(args: Array<String>): Array<String> {
         var gameJarPath: String? = null
         var modDir: String? = null
         val newArgs = mutableListOf<String>()
@@ -136,7 +136,7 @@ object ModLoader {
         return newArgs.toTypedArray()
     }
 
-    internal fun initLoader() {
+    fun initLoader() {
         this.logger.info("starting mod loader")
         this.discoverer = ModDiscoverer(this.modDir)
         this.gameJar = GameJar(Paths.get(this.gameJarPath))
@@ -179,7 +179,6 @@ object ModLoader {
             .map { Class.forName(it.clazz, true, this.classLoader).getDeclaredConstructor().newInstance() as T }
             .forEach { method(it) }
     }
-
 }
 
 fun main(args: Array<String>) {

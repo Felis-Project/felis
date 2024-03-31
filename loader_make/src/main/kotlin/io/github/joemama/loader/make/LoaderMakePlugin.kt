@@ -73,9 +73,10 @@ class LoaderMakePlugin : Plugin<Project> {
                 loggerCfgFile.get().asFile.apply {
                     if (!exists()) {
                         parentFile.mkdirs()
-                        this.javaClass.classLoader.getResourceAsStream("log4j2.xml")?.readAllBytes()?.let {
-                            writeBytes(it)
-                        }
+                        LoaderMakePlugin::class.java.classLoader.getResourceAsStream("log4j2.xml")?.readAllBytes()
+                            ?.let {
+                                writeBytes(it)
+                            }
                     }
                 }
             }
