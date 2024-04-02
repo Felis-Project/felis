@@ -1,5 +1,8 @@
 package io.github.joemama.loader
 
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.types.boolean
 import io.github.joemama.loader.meta.ModDiscoverer
 import io.github.joemama.loader.mixin.MixinLoaderPlugin
 import io.github.joemama.loader.transformer.ClassData
@@ -82,8 +85,6 @@ object DebugTransformation : Transformation {
 
 object ModLoader {
     private val logger: Logger = LoggerFactory.getLogger(ModLoader::class.java)
-    private lateinit var modDir: String
-    private lateinit var gameJarPath: String
     lateinit var discoverer: ModDiscoverer
         private set
     lateinit var gameJar: GameJar
@@ -92,61 +93,18 @@ object ModLoader {
         private set
     lateinit var transformer: Transformer
         private set
-    private var debugTransformer: Boolean = false
 
-    fun parseArgs(args: Array<String>): Array<String> {
-        var gameJarPath: String? = null
-        var modDir: String? = null
-        val newArgs = mutableListOf<String>()
-        var i = 0
-        while (i < args.size) {
-            when (args[i]) {
-                "--print-cp" -> {
-                    val cp = System.getProperty("java.class.path").split(":")
-                    for (s in cp) {
-                        println(s)
-                    }
-                }
-
-                "--source" -> {
-                    if (i + 1 > args.size - 1) throw IllegalArgumentException("Expected a jar file location to be provided")
-                    gameJarPath = args[i + 1]
-                    i++
-                }
-
-                "--mods" -> {
-                    if (i + 1 > args.size - 1) throw IllegalArgumentException("Expected a mod directory to be provided")
-                    modDir = args[i + 1]
-                    i++
-                }
-
-                "--debug-t" -> {
-                    this.debugTransformer = true
-                }
-
-                else -> {
-                    newArgs.add(args[i])
-                }
-            }
-            i++
-        }
-
-        this.gameJarPath = gameJarPath ?: throw IllegalArgumentException("Provide a source jar with --source")
-        this.modDir = modDir ?: throw IllegalArgumentException("Provide a mod directory with --mods")
-        return newArgs.toTypedArray()
-    }
-
-    fun initLoader() {
+    fun initLoader(mods: List<String>, sourceJar: String, debugTransform: Boolean) {
         this.logger.info("starting mod loader")
-        this.discoverer = ModDiscoverer(this.modDir)
-        this.gameJar = GameJar(Paths.get(this.gameJarPath))
+        this.discoverer = ModDiscoverer(mods)
+        this.gameJar = GameJar(Paths.get(sourceJar))
 
         this.classLoader = TransformingClassLoader()
 
         this.transformer = Transformer()
 
         this.transformer.apply {
-            if (this@ModLoader.debugTransformer) {
+            if (debugTransform) {
                 registerInternal(DebugTransformation)
             }
         }
@@ -159,7 +117,7 @@ object ModLoader {
 
     fun start(owner: String, method: String, desc: String, params: Array<String>) {
         this.logger.info("starting game")
-        this.logger.debug("target game jars: ${this.gameJarPath}")
+        this.logger.debug("target game jars: {}", this.gameJar.jarLoc)
         this.logger.debug("game args: ${params.contentToString()}")
 
         val mainClass = this.classLoader.loadClass(owner)
@@ -181,13 +139,53 @@ object ModLoader {
     }
 }
 
+class ModLoaderCommand : CliktCommand() {
+    private val mods: List<String> by option("--mods")
+        .help("All directories and jar files to look for mods in separated by ':'")
+        .split(":")
+        .default(emptyList())
+    private val gameJarPath: String by option("--source")
+        .help("Define the source jar to run the game from")
+        .required()
+    @Suppress("unused") // TODO: Add lib handling
+    private val libs: List<String> by option("--libs")
+        .help("Define jars included at runtime but not transformed")
+        .split(":")
+        .default(emptyList())
+    private val gameArgs: String by option("--args")
+        .help("Arguments passed into the main method of the game")
+        .default("")
+    private val printClassPath: Boolean by option("--print-cp")
+        .help("Print the jvm classpath")
+        .boolean()
+        .default(false)
+    private val debugTransformation: Boolean by option("--debug-t")
+        .help("Apply a debug transformation at runtime")
+        .boolean()
+        .default(false)
+
+    override fun run() {
+        if (this.printClassPath) {
+            val cp = System.getProperty("java.class.path").split(":")
+            for (s in cp) {
+                println(s)
+            }
+        }
+        ModLoader.initLoader(
+            mods = this.mods,
+            sourceJar = this.gameJarPath,
+            debugTransform = this.debugTransformation
+        )
+        ModLoader.start(
+            owner = "net.minecraft.client.main.Main",
+            method = "main",
+            desc = Type.getMethodDescriptor(Type.getType(Void.TYPE), Type.getType(Array<String>::class.java)),
+            params = this.gameArgs.split(" ").toTypedArray()
+        )
+    }
+}
+
 fun main(args: Array<String>) {
-    val newArgs = ModLoader.parseArgs(args)
-    ModLoader.initLoader()
-    ModLoader.start(
-        owner = "net.minecraft.client.main.Main",
-        method = "main",
-        desc = Type.getMethodDescriptor(Type.getType(Void.TYPE), Type.getType(Array<String>::class.java)),
-        params = newArgs
-    )
+    println("Modloader running using arguments: ${args.contentToString()}")
+    ModLoaderCommand().main(args)
 }

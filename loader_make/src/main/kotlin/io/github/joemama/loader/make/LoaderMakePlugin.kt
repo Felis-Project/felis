@@ -94,19 +94,22 @@ class LoaderMakePlugin : Plugin<Project> {
             )
             it.args(
                 "--mods", modPaths,
-                "--source", gameJars.client.path,
-                "--accessToken", "0",
-                "--version", "1.20.4-JoeLoader",
-                "--gameDir", "run",
-                "--assetsDir", downloadAssetsTask.get().assetDir.get().asFile.path,
-                "--assetIndex", piston.getVersion("1.20.4").assetIndex.id
+                "--source", gameJars.merged.path,
+                "--args",
+                """
+                --accessToken 0 
+                --version 1.20.4-JoeLoader 
+                --gameDir run 
+                --assetsDir ${downloadAssetsTask.get().assetDir.get().asFile.path} 
+                --assetIndex ${piston.getVersion("1.20.4").assetIndex.id}
+                """.trimIndent().filter { it != '\n' }
             )
         }
 
         project.tasks.register("genSources", GenSourcesTask::class.java) {
             it.group = "minecraft"
-            it.inputJar.set(gameJars.client)
-            it.outputJar.set(gameJars.client.parentFile.resolve(gameJars.client.nameWithoutExtension + "-sources"))
+            it.inputJar.set(gameJars.merged)
+            it.outputJar.set(gameJars.merged.parentFile.resolve(gameJars.merged.nameWithoutExtension + "-sources"))
         }
         project.tasks.withType(Jar::class.java) { jar ->
             val refmap = project.layout.buildDirectory.file("mixin.refmap.json")

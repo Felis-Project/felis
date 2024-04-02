@@ -51,14 +51,12 @@ data class Mod(val jar: JarFile, val meta: ModMeta) {
     fun getContentUrl(name: String): URL = URI.create(this.url + name).toURL()
 }
 
-class ModDiscoverer(private val modPaths: String) {
-    private val modPathsSplit by lazy {
-        this.modPaths.split(":").map(String::trim).filterNot(String::isEmpty).map(Paths::get)
-    }
+class ModDiscoverer(modPaths: List<String>) {
+    private val modPathsSplit = modPaths.map { Paths.get(it) }
     val mods: List<Mod>
 
     init {
-        logger.info("mod discovery running for files ${this.modPaths}")
+        logger.info("mod discovery running for files $modPaths")
         val modList = mutableListOf<Mod>()
 
         for (file in this.modPathsSplit.map { it.toFile() }) {

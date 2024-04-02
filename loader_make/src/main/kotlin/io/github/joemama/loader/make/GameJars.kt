@@ -29,13 +29,15 @@ class GameJars(private val project: Project, private val versionId: String) {
         dir
     }
 
-    fun prepare(): Jars {
+    data class JarResult(val jars: Jars, val merged: File)
+
+    fun prepare(): JarResult {
         val jars = fetchJars()
         val mapped = remapJars(jars)
+        val merged = JarMerger().merge(mapped.client, mapped.server)
 
-        this.project.dependencies.add("compileOnly", this.project.files(mapped.client))
-        this.project.dependencies.add("compileOnly", this.project.files(mapped.server))
-        return mapped
+        this.project.dependencies.add("compileOnly", this.project.files(merged))
+        return JarResult(jars, merged)
     }
 
     private fun fetchJars(): Jars {

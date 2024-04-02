@@ -1,3 +1,6 @@
+import javax.security.auth.login.CredentialException
+import javax.security.auth.login.CredentialNotFoundException
+
 plugins {
     `java-gradle-plugin`
     kotlin("jvm") version "1.9.23"
@@ -7,7 +10,7 @@ plugins {
 
 val asmVersion = "9.5"
 group = "io.github.joemama"
-version = "1.0-ALPHA"
+version = "1.1-ALPHA"
 
 repositories {
     mavenCentral()
@@ -35,11 +38,11 @@ gradlePlugin {
 publishing {
     repositories {
         maven {
-            name = "Github"
-            url = uri("https://maven.pkg.github.com/0xJoeMama/ModLoader")
+            name = "Repsy"
+            url = uri("https://repo.repsy.io/mvn/0xjoemama/public")
             credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+                username = System.getenv("REPSY_USERNAME")
+                password = System.getenv("REPSY_PASSWORD")
             }
         }
     }

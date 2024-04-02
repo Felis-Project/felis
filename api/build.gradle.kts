@@ -4,18 +4,29 @@ plugins {
     `maven-publish`
 }
 
+group = "io.github.joemama"
+version = "1.0-ALPHA"
+
 dependencies {
     modLoader(project(":loader"))
 }
 
 publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            pom {
+                artifactId = "api"
+            }
+            from(components["java"])
+        }
+    }
     repositories {
         maven {
-            name = "Github"
-            url = uri("https://maven.pkg.github.com/0xJoeMama/ModLoader")
+            name = "Repsy"
+            url = uri("https://repo.repsy.io/mvn/0xjoemama/public")
             credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+                username = System.getenv("REPSY_USERNAME")
+                password = System.getenv("REPSY_PASSWORD")
             }
         }
     }
