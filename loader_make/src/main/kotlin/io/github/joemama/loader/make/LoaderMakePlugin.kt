@@ -5,6 +5,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
 import org.gradle.jvm.tasks.Jar
+import org.gradle.plugins.ide.idea.IdeaPlugin
 import java.io.File
 import java.net.http.HttpClient
 import java.util.concurrent.ExecutorService
@@ -32,10 +33,22 @@ class LoaderMakePlugin : Plugin<Project> {
                 it.url = project.uri("https://repo.spongepowered.org/repository/maven-public/")
                 it.name = "Sponge"
             }
+            maven {
+                it.url = project.uri("https://repo.repsy.io/mvn/0xjoemama/public")
+                it.name = "Loader Repo"
+            }
+        }
+
+        project.buildscript.apply {
+            repositories.apply {
+                gradlePluginPortal()
+                mavenCentral()
+            }
         }
 
         project.plugins.apply {
             apply("java")
+            apply(IdeaPlugin::class.java)
         }
 
         val mcLibs = project.configurations.create("minecraftLibrary") {
@@ -67,7 +80,7 @@ class LoaderMakePlugin : Plugin<Project> {
             )
         }
 
-        project.tasks.register("runGame", JavaExec::class.java) { it ->
+        project.tasks.register("runClient", JavaExec::class.java) { it ->
             val loggerCfgFile = project.layout.buildDirectory.file("log4j2.xml")
             it.doFirst {
                 loggerCfgFile.get().asFile.apply {
@@ -95,6 +108,7 @@ class LoaderMakePlugin : Plugin<Project> {
             it.args(
                 "--mods", modPaths,
                 "--source", gameJars.merged.path,
+                "--side", "CLIENT",
                 "--args",
                 """
                 --accessToken 0 
@@ -103,6 +117,39 @@ class LoaderMakePlugin : Plugin<Project> {
                 --assetsDir ${downloadAssetsTask.get().assetDir.get().asFile.path} 
                 --assetIndex ${piston.getVersion("1.20.4").assetIndex.id}
                 """.trimIndent().filter { it != '\n' }
+            )
+        }
+
+        project.tasks.register("runServer", JavaExec::class.java) { it ->
+            val loggerCfgFile = project.layout.buildDirectory.file("log4j2.xml")
+            it.doFirst {
+                loggerCfgFile.get().asFile.apply {
+                    if (!exists()) {
+                        parentFile.mkdirs()
+                        LoaderMakePlugin::class.java.classLoader.getResourceAsStream("log4j2.xml")?.readAllBytes()
+                            ?.let {
+                                writeBytes(it)
+                            }
+                    }
+                }
+            }
+            it.dependsOn("build")
+            it.group = "minecraft"
+            it.mainClass.set("io.github.joemama.loader.MainKt")
+            it.classpath = mcLibs + modLoader
+
+            val modFiles = mutableSetOf<File>()
+            modFiles.addAll(modImplementation.files)
+            modFiles.add(project.layout.buildDirectory.files("libs").singleFile)
+            val modPaths = modFiles.joinToString(separator = ":") { it.path }
+            it.jvmArgs(
+                "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"
+            )
+            it.args(
+                "--mods", modPaths,
+                "--source", gameJars.merged.path,
+                "--side", "SERVER",
+                "--args", "nogui"
             )
         }
 

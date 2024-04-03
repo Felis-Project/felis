@@ -17,15 +17,15 @@ class JarMerger {
         val serverJar = JarFile(server)
         val output = client.parentFile.resolve("1.20.4-mapped-merged.jar")
 
-        // if (!output.exists()) {
-        output.createNewFile()
-        val jarWriter = JarOutputStream(output.outputStream())
+        if (!output.exists()) {
+            output.createNewFile()
+            val jarWriter = JarOutputStream(output.outputStream())
 
-        jarWriter.use {
-            fromJar(jarWriter, clientJar, serverJar, "CLIENT")
-            fromJar(jarWriter, serverJar, clientJar, "SERVER")
+            jarWriter.use {
+                fromJar(jarWriter, clientJar, serverJar, "CLIENT")
+                fromJar(jarWriter, serverJar, clientJar, "SERVER")
+            }
         }
-        // }
 
         return output
     }
@@ -60,7 +60,15 @@ class JarMerger {
             val serverEntry = serverJar.getJarEntry(entry.name)
             if (serverEntry == null) {
                 // TODO: only in client
-                writeEntry(clientJar, entry)
+                clientJar.getInputStream(entry).use { input ->
+                    val reader = ClassReader(input)
+                    val node = ClassNode().also { reader.accept(it, 0) }
+                    if (node.visibleAnnotations == null) node.visibleAnnotations = mutableListOf()
+                    node.visibleAnnotations.add(AnnotationNode("Lio/github/joemama/loader/side/OnlyIn;").also {
+                        it.visitEnum("side", "Lio/github/joemama/loader/side/Side;", side)
+                    })
+                    writeClass(entry.name, node)
+                }
                 continue
             }
 
@@ -78,9 +86,9 @@ class JarMerger {
                 }.forEach { field ->
                     if (field.visibleAnnotations == null) field.visibleAnnotations = mutableListOf()
                     field.visibleAnnotations.add(AnnotationNode("Lio/github/joemama/loader/side/OnlyIn;").also {
-                        it.values.add("side")
-                        it.values.add(arrayOf("Lio/github/joemama/loader/side/Side;", side))
+                        it.visitEnum("side", "Lio/github/joemama/loader/side/Side;", side)
                     })
+
                     this.add(field)
                 }
             }
@@ -91,9 +99,9 @@ class JarMerger {
                 }.forEach { method ->
                     if (method.visibleAnnotations == null) method.visibleAnnotations = mutableListOf()
                     method.visibleAnnotations.add(AnnotationNode("Lio/github/joemama/loader/side/OnlyIn;").also {
-                        it.values.add("side")
-                        it.values.add(arrayOf("Lio/github/joemama/loader/side/Side;", side))
+                        it.visitEnum("side", "Lio/github/joemama/loader/side/Side;", side)
                     })
+
                     this.add(method)
                 }
             }

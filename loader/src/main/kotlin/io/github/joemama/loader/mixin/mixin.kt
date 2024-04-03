@@ -86,7 +86,7 @@ class Mixin : IMixinService, IClassProvider, IClassBytecodeProvider, ITransforme
     override fun getName(): String = "ModLoader"
 
     // TODO: change once we get legit side handling
-    override fun getSideName(): String = "CLIENT"
+    override fun getSideName(): String = ModLoader.side.name
     override fun isValid(): Boolean = true
     override fun getClassProvider(): IClassProvider = this
     override fun getBytecodeProvider(): IClassBytecodeProvider = this

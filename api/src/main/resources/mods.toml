@@ -8,5 +8,9 @@ name = "bootstrap transformation for common entrypoint"
 class = "io.github.joemama.loader.api.BootstrapTransformation"
 target = "net.minecraft.server.Bootstrap"
 
+[[transforms]]
+name = "minecraft transformation for client entrypoint"
+class = "io.github.joemama.loader.api.client.MinecraftTransformation"
+
 [[mixins]]
 path = "api.mixins.json"

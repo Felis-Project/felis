@@ -3,8 +3,11 @@ package io.github.joemama.loader
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.boolean
+import com.github.ajalt.clikt.parameters.types.enum
 import io.github.joemama.loader.meta.ModDiscoverer
 import io.github.joemama.loader.mixin.MixinLoaderPlugin
+import io.github.joemama.loader.side.Side
+import io.github.joemama.loader.side.SideStrippingTransformation
 import io.github.joemama.loader.transformer.ClassData
 import org.slf4j.LoggerFactory
 
@@ -93,9 +96,11 @@ object ModLoader {
         private set
     lateinit var transformer: Transformer
         private set
+    lateinit var side: Side
 
-    fun initLoader(mods: List<String>, sourceJar: String, debugTransform: Boolean) {
+    fun initLoader(mods: List<String>, sourceJar: String, side: Side, debugTransform: Boolean) {
         this.logger.info("starting mod loader")
+        this.side = side
         this.discoverer = ModDiscoverer(mods)
         this.gameJar = GameJar(Paths.get(sourceJar))
 
@@ -107,6 +112,7 @@ object ModLoader {
             if (debugTransform) {
                 registerInternal(DebugTransformation)
             }
+            registerInternal(SideStrippingTransformation)
         }
 
         // TODO: Hardcoded for now
@@ -147,6 +153,7 @@ class ModLoaderCommand : CliktCommand() {
     private val gameJarPath: String by option("--source")
         .help("Define the source jar to run the game from")
         .required()
+
     @Suppress("unused") // TODO: Add lib handling
     private val libs: List<String> by option("--libs")
         .help("Define jars included at runtime but not transformed")
@@ -163,6 +170,7 @@ class ModLoaderCommand : CliktCommand() {
         .help("Apply a debug transformation at runtime")
         .boolean()
         .default(false)
+    private val side: Side by option("--side").enum<Side> { it.name }.required()
 
     override fun run() {
         if (this.printClassPath) {
@@ -171,13 +179,18 @@ class ModLoaderCommand : CliktCommand() {
                 println(s)
             }
         }
+        val mainClass = when (this.side) {
+            Side.CLIENT -> "net.minecraft.client.main.Main"
+            Side.SERVER -> "net.minecraft.server.Main"
+        }
         ModLoader.initLoader(
             mods = this.mods,
             sourceJar = this.gameJarPath,
+            side = this.side,
             debugTransform = this.debugTransformation
         )
         ModLoader.start(
-            owner = "net.minecraft.client.main.Main",
+            owner = mainClass,
             method = "main",
             desc = Type.getMethodDescriptor(Type.getType(Void.TYPE), Type.getType(Array<String>::class.java)),
             params = this.gameArgs.split(" ").toTypedArray()

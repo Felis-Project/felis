@@ -1,6 +1,3 @@
-import javax.security.auth.login.CredentialException
-import javax.security.auth.login.CredentialNotFoundException
-
 plugins {
     `java-gradle-plugin`
     kotlin("jvm") version "1.9.23"

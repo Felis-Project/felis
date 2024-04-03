@@ -3,6 +3,7 @@ plugins {
     id("loader-make")
     kotlin("plugin.serialization") version "1.9.23"
     `maven-publish`
+    idea
 }
 
 val asmVersion = "9.5"

@@ -60,11 +60,18 @@ class Transformer : Transformation {
             for (t in this.external.get(name)) {
                 this.logger.info("transforming $name with ${t.value.transformationName}")
                 t.value.transform(classData)
+                if (classData.skip) {
+                    return
+                }
             }
         }
 
         for (t in this.internal) {
             t.transform(classData)
+
+            if (classData.skip) {
+                return
+            }
         }
     }
 }
@@ -109,9 +116,16 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
             if (classData != null) {
                 val bytes = this.transformationPerfCounter.timed {
                     ModLoader.transformer.transform(classData)
-                    classData.bytes
+                    if (!classData.skip) {
+                        classData.bytes
+                    } else {
+                        null
+                    }
                 }
-                return this.defineClass(name, bytes, 0, bytes.size)
+
+                if (bytes != null) {
+                    return this.defineClass(name, bytes, 0, bytes.size)
+                }
             }
         }
 
@@ -170,7 +184,7 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     }
 }
 
-class ClassData(initialBytes: ByteArray, val name: String) {
+class ClassData(initialBytes: ByteArray, val name: String, var skip: Boolean = false) {
     private var internalBytes: ByteArray? = initialBytes
         get() {
             if (field != null) return field
@@ -189,8 +203,8 @@ class ClassData(initialBytes: ByteArray, val name: String) {
             return field
         }
 
-    var bytes
-        get() = this.internalBytes!!
+    var bytes: ByteArray?
+        get() = this.internalBytes
         set(bytes) {
             this.internalBytes = bytes
         }
