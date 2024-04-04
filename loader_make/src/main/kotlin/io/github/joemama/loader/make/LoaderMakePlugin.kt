@@ -3,9 +3,9 @@ package io.github.joemama.loader.make
 import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.JavaExec
+import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.jvm.tasks.Jar
-import org.gradle.plugins.ide.idea.IdeaPlugin
+import org.jetbrains.gradle.ext.IdeaExtPlugin
 import java.io.File
 import java.net.http.HttpClient
 import java.util.concurrent.ExecutorService
@@ -48,7 +48,8 @@ class LoaderMakePlugin : Plugin<Project> {
 
         project.plugins.apply {
             apply("java")
-            apply(IdeaPlugin::class.java)
+            apply("idea")
+            apply(IdeaExtPlugin::class.java)
         }
 
         val mcLibs = project.configurations.create("minecraftLibrary") {
@@ -80,84 +81,6 @@ class LoaderMakePlugin : Plugin<Project> {
             )
         }
 
-        project.tasks.register("runClient", JavaExec::class.java) { it ->
-            val loggerCfgFile = project.layout.buildDirectory.file("log4j2.xml")
-            it.doFirst {
-                loggerCfgFile.get().asFile.apply {
-                    if (!exists()) {
-                        parentFile.mkdirs()
-                        LoaderMakePlugin::class.java.classLoader.getResourceAsStream("log4j2.xml")?.readAllBytes()
-                            ?.let {
-                                writeBytes(it)
-                            }
-                    }
-                }
-            }
-            it.dependsOn("build", "downloadAssets")
-            it.group = "minecraft"
-            it.mainClass.set("io.github.joemama.loader.MainKt")
-            it.classpath = mcLibs + modLoader
-
-            val modFiles = mutableSetOf<File>()
-            modFiles.addAll(modImplementation.files)
-            modFiles.add(project.layout.buildDirectory.files("libs").singleFile)
-            val modPaths = modFiles.joinToString(separator = ":") { it.path }
-            it.jvmArgs(
-                "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"
-            )
-            it.args(
-                "--mods", modPaths,
-                "--source", gameJars.merged.path,
-                "--side", "CLIENT",
-                "--args",
-                """
-                --accessToken 0 
-                --version 1.20.4-JoeLoader 
-                --gameDir run 
-                --assetsDir ${downloadAssetsTask.get().assetDir.get().asFile.path} 
-                --assetIndex ${piston.getVersion("1.20.4").assetIndex.id}
-                """.trimIndent().filter { it != '\n' }
-            )
-        }
-
-        project.tasks.register("runServer", JavaExec::class.java) { it ->
-            val loggerCfgFile = project.layout.buildDirectory.file("log4j2.xml")
-            it.doFirst {
-                loggerCfgFile.get().asFile.apply {
-                    if (!exists()) {
-                        parentFile.mkdirs()
-                        LoaderMakePlugin::class.java.classLoader.getResourceAsStream("log4j2.xml")?.readAllBytes()
-                            ?.let {
-                                writeBytes(it)
-                            }
-                    }
-                }
-            }
-            it.dependsOn("build")
-            it.group = "minecraft"
-            it.mainClass.set("io.github.joemama.loader.MainKt")
-            it.classpath = mcLibs + modLoader
-
-            val modFiles = mutableSetOf<File>()
-            modFiles.addAll(modImplementation.files)
-            modFiles.add(project.layout.buildDirectory.files("libs").singleFile)
-            val modPaths = modFiles.joinToString(separator = ":") { it.path }
-            it.jvmArgs(
-                "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"
-            )
-            it.args(
-                "--mods", modPaths,
-                "--source", gameJars.merged.path,
-                "--side", "SERVER",
-                "--args", "nogui"
-            )
-        }
-
-        project.tasks.register("genSources", GenSourcesTask::class.java) {
-            it.group = "minecraft"
-            it.inputJar.set(gameJars.merged)
-            it.outputJar.set(gameJars.merged.parentFile.resolve(gameJars.merged.nameWithoutExtension + "-sources"))
-        }
         project.tasks.withType(Jar::class.java) { jar ->
             val refmap = project.layout.buildDirectory.file("mixin.refmap.json")
             jar.doFirst {
@@ -167,6 +90,46 @@ class LoaderMakePlugin : Plugin<Project> {
                 }
             }
             jar.from(refmap)
+        }
+
+        val modFiles = mutableSetOf<File>()
+
+        modFiles.addAll(modImplementation.files)
+        modFiles.add(project.extensions.getByType(BasePluginExtension::class.java).libsDirectory.get().asFile)
+
+        val clientRun = ModRun(
+            name = "Client",
+            project = project,
+            sourceJar = gameJars.merged,
+            modFiles = modFiles,
+            side = Side.CLIENT,
+            args = listOf(
+                "--accessToken", "0",
+                "--version", "1.20.4-JoeLoader",
+                "--gameDir", "run",
+                "--assetsDir", downloadAssetsTask.get().assetDir.get().asFile.path,
+                "--assetIndex", piston.getVersion("1.20.4").assetIndex.id
+            )
+        )
+
+        val serverRun = ModRun(
+            name = "Server",
+            project = project,
+            sourceJar = gameJars.merged,
+            modFiles = modFiles,
+            side = Side.SERVER,
+            args = listOf("nogui")
+        )
+
+        clientRun.ideaRun()
+        clientRun.gradleTask()
+        serverRun.ideaRun()
+        serverRun.gradleTask()
+
+        project.tasks.register("genSources", GenSourcesTask::class.java) {
+            it.group = "minecraft"
+            it.inputJar.set(gameJars.merged)
+            it.outputJar.set(gameJars.merged.parentFile.resolve(gameJars.merged.nameWithoutExtension + "-sources"))
         }
     }
 }

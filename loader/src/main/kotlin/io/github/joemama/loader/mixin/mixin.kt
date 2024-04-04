@@ -37,7 +37,7 @@ class MixinLogger : LoggerAdapterAbstract("io/github/joemama/loader/mixin") {
         org.spongepowered.asm.logging.Level.INFO -> Level.INFO
         org.spongepowered.asm.logging.Level.TRACE -> Level.TRACE
         org.spongepowered.asm.logging.Level.ERROR -> Level.ERROR
-        else -> throw IllegalArgumentException("Invalid logging level")
+        org.spongepowered.asm.logging.Level.FATAL -> Level.ERROR
     }
 
     override fun getType(): String = "slf4j Logger"

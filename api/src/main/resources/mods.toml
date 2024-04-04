@@ -11,6 +11,7 @@ target = "net.minecraft.server.Bootstrap"
 [[transforms]]
 name = "minecraft transformation for client entrypoint"
 class = "io.github.joemama.loader.api.client.MinecraftTransformation"
+target = "net.minecraft.client.Minecraft"
 
 [[mixins]]
 path = "api.mixins.json"

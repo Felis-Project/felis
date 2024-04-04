@@ -4,8 +4,9 @@
   "package": "io.github.joemama.loader.api.mixins",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MixinClientBrandRetriever",
-    "MixinMain"
+  ],
+  "client": [
+    "client.MixinClientBrandRetriever"
   ],
   "injectors": {
     "defaultRequire": 1
