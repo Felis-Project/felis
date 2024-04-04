@@ -2,6 +2,10 @@ package io.github.joemama.loader.make
 
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
+import org.gradle.api.file.RegularFile
+import org.gradle.api.plugins.BasePluginExtension
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.JavaExec
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.jetbrains.gradle.ext.Application
@@ -19,7 +23,6 @@ data class ModRun(
     val name: String,
     val sourceJar: File,
     val side: Side,
-    val modFiles: Collection<File>,
     val args: List<String> = emptyList(),
     val taskDependencies: List<String> = emptyList()
 ) {
@@ -27,6 +30,15 @@ data class ModRun(
         val mcLibs = project.configurations.getByName("minecraftLibrary")
         val modLoader = project.configurations.getByName("modLoader")
         mcLibs + modLoader
+    }
+
+    private val modFiles: ListProperty<File> by lazy {
+        val modImplementation = project.configurations.getByName("modImplementation")
+        val modFiles = project.objects.listProperty(File::class.java)
+        // TODO: Don't resolve it here
+        modFiles.addAll(modImplementation.asFileTree)
+        modFiles.add(project.extensions.getByType(BasePluginExtension::class.java).libsDirectory.asFile)
+        modFiles
     }
 
     fun ideaRun() {
@@ -57,7 +69,7 @@ data class ModRun(
                     "-cp", cp.files.joinToString(":") { it.path }
                 )
                 programParameters = listOf(
-                    "--mods", this@ModRun.modFiles.joinToString(":") { it.path },
+                    "--mods", this@ModRun.modFiles.get().joinToString(":") { it.path },
                     "--source", this@ModRun.sourceJar.path,
                     "--side", this@ModRun.side.name,
                     "--args", this@ModRun.args.joinToString(" ")
@@ -88,7 +100,7 @@ data class ModRun(
             it.mainClass.set("io.github.joemama.loader.MainKt")
             it.classpath = this.cp
 
-            val modPaths = modFiles.joinToString(separator = ":") { it.path }
+            val modPaths = modFiles.get().joinToString(separator = ":") { it.path }
 
             it.jvmArgs(
                 "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"

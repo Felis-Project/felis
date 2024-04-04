@@ -7,7 +7,7 @@ plugins {
 
 val asmVersion = "9.5"
 group = "io.github.joemama"
-version = "1.2-ALPHA"
+version = "1.4-ALPHA"
 
 repositories {
     mavenCentral()

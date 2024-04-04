@@ -3,10 +3,8 @@ package io.github.joemama.loader.make
 import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.gradle.ext.IdeaExtPlugin
-import java.io.File
 import java.net.http.HttpClient
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -92,16 +90,10 @@ class LoaderMakePlugin : Plugin<Project> {
             jar.from(refmap)
         }
 
-        val modFiles = mutableSetOf<File>()
-
-        modFiles.addAll(modImplementation.files)
-        modFiles.add(project.extensions.getByType(BasePluginExtension::class.java).libsDirectory.get().asFile)
-
         val clientRun = ModRun(
             name = "Client",
             project = project,
             sourceJar = gameJars.merged,
-            modFiles = modFiles,
             side = Side.CLIENT,
             args = listOf(
                 "--accessToken", "0",
@@ -116,20 +108,25 @@ class LoaderMakePlugin : Plugin<Project> {
             name = "Server",
             project = project,
             sourceJar = gameJars.merged,
-            modFiles = modFiles,
             side = Side.SERVER,
             args = listOf("nogui")
         )
 
-        clientRun.ideaRun()
         clientRun.gradleTask()
-        serverRun.ideaRun()
         serverRun.gradleTask()
 
         project.tasks.register("genSources", GenSourcesTask::class.java) {
             it.group = "minecraft"
             it.inputJar.set(gameJars.merged)
             it.outputJar.set(gameJars.merged.parentFile.resolve(gameJars.merged.nameWithoutExtension + "-sources"))
+        }
+
+        project.tasks.register("genIdeaRuns") {
+            it.group = "minecraft"
+            it.doLast {
+                clientRun.ideaRun()
+                serverRun.ideaRun()
+            }
         }
     }
 }
