@@ -3,7 +3,8 @@
 package io.github.joemama.loader.api.client
 
 import io.github.joemama.loader.ModLoader
-import io.github.joemama.loader.transformer.ClassData
+import io.github.joemama.loader.asm.openMethod
+import io.github.joemama.loader.transformer.ClassContainer
 import io.github.joemama.loader.transformer.Transformation
 import net.minecraft.client.Options
 import net.minecraft.client.main.GameConfig
@@ -22,27 +23,26 @@ fun clientApiInit() {
 }
 
 class MinecraftTransformation : Transformation {
-    override fun transform(classData: ClassData) {
-        val ctor = classData.node.methods.first {
-            it.name == "<init>" && it.desc == Type.getMethodDescriptor(
-                Type.VOID_TYPE,
-                Type.getType(GameConfig::class.java)
-            )
-        }
-        val gameOptionsSet = ctor.instructions.first {
-            it.opcode == Opcodes.PUTFIELD && (it as FieldInsnNode).let { field ->
-                field.name == "options" && field.desc == Type.getDescriptor(
-                    Options::class.java
-                ) && field.owner == "net/minecraft/client/Minecraft"
+    override fun transform(container: ClassContainer) {
+        container.openMethod(
+            "<init>",
+            Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(GameConfig::class.java))
+        ) {
+            val gameOptionsSet = instructions.first {
+                it.opcode == Opcodes.PUTFIELD && (it as FieldInsnNode).let { field ->
+                    field.name == "options" && field.desc == Type.getDescriptor(
+                        Options::class.java
+                    ) && field.owner == "net/minecraft/client/Minecraft"
+                }
             }
-        }
-        val methodCall = MethodInsnNode(
-            Opcodes.INVOKESTATIC,
-            "io/github/joemama/loader/api/client/ClientApiInit",
-            "clientApiInit",
-            Type.getMethodDescriptor(Type.VOID_TYPE)
-        )
+            val methodCall = MethodInsnNode(
+                Opcodes.INVOKESTATIC,
+                "io/github/joemama/loader/api/client/ClientApiInit",
+                "clientApiInit",
+                Type.getMethodDescriptor(Type.VOID_TYPE)
+            )
 
-        ctor.instructions.insert(gameOptionsSet, methodCall)
+            instructions.insert(gameOptionsSet, methodCall)
+        }
     }
 }

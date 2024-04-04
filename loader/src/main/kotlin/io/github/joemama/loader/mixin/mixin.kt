@@ -2,7 +2,7 @@ package io.github.joemama.loader.mixin
 
 import io.github.joemama.loader.LoaderPluginEntrypoint
 import io.github.joemama.loader.ModLoader
-import io.github.joemama.loader.transformer.ClassData
+import io.github.joemama.loader.transformer.ClassContainer
 import io.github.joemama.loader.transformer.Transformation
 import org.objectweb.asm.tree.ClassNode
 import org.slf4j.LoggerFactory
@@ -23,9 +23,9 @@ import java.io.InputStream
 import java.net.URL
 
 object MixinTransformation : Transformation {
-    override fun transform(classData: ClassData) {
+    override fun transform(container: ClassContainer) {
         // TODO: DO NOT PARSE ALL CLASSES JEEZ
-        Mixin.transformer.transformClass(Mixin.environment, classData.name, classData.node)
+        Mixin.transformer.transformClass(Mixin.environment, container.name, container.node)
     }
 }
 

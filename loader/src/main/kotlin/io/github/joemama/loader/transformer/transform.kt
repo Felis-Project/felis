@@ -18,7 +18,7 @@ import kotlin.time.DurationUnit
 import kotlin.time.measureTime
 
 interface Transformation {
-    fun transform(classData: ClassData)
+    fun transform(container: ClassContainer)
 }
 
 data class SimpleTransformation(
@@ -54,22 +54,22 @@ class Transformer : Transformation {
         this.internal.add(t)
     }
 
-    override fun transform(classData: ClassData) {
-        val name = classData.name
+    override fun transform(container: ClassContainer) {
+        val name = container.name
         if (this.external.containsKey(name)) {
             for (t in this.external.get(name)) {
                 this.logger.info("transforming $name with ${t.value.transformationName}")
-                t.value.transform(classData)
-                if (classData.skip) {
+                t.value.transform(container)
+                if (container.skip) {
                     return
                 }
             }
         }
 
         for (t in this.internal) {
-            t.transform(classData)
+            t.transform(container)
 
-            if (classData.skip) {
+            if (container.skip) {
                 return
             }
         }
@@ -90,10 +90,10 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     private val transformationPerfCounter =
         PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms")
 
-    fun getClassData(name: String): ClassData? {
+    fun getClassData(name: String): ClassContainer? {
         val normalName = name.replace(".", "/") + ".class"
         // getResourceAsStream since mixins require system resources as well
-        return this.getResourceAsStream(normalName)?.use { ClassData(it.readAllBytes(), name) }
+        return this.getResourceAsStream(normalName)?.use { ClassContainer(name, it.readAllBytes()) }
     }
 
     override fun getResourceAsStream(name: String): InputStream? {
@@ -184,32 +184,76 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     }
 }
 
-class ClassData(initialBytes: ByteArray, val name: String, var skip: Boolean = false) {
-    private var internalBytes: ByteArray? = initialBytes
-        get() {
-            if (field != null) return field
-            val writer = MixinClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
-            this.internalNode!!.accept(writer)
-            this.internalNode = null
-            return writer.toByteArray()
-        }
-    private var internalNode: ClassNode? = null
-        get() {
-            if (field != null) return field
-            val reader = ClassReader(this.internalBytes!!)
-            field = ClassNode()
-            reader.accept(field, ClassReader.EXPAND_FRAMES)
-            this.internalBytes = null
-            return field
+sealed interface ClassRef {
+    @JvmInline
+    value class NodeRef internal constructor(override val node: ClassNode) : ClassRef {
+        override fun nodeRef(): NodeRef = this
+
+        override fun bytesRef(): BytesRef {
+            val writer = MixinClassWriter(ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
+            this.node.accept(writer)
+            return BytesRef(writer.toByteArray())
         }
 
-    var bytes: ByteArray?
-        get() = this.internalBytes
-        set(bytes) {
-            this.internalBytes = bytes
+        override val bytes: ByteArray
+            get() = throw IllegalAccessException("Nodes shouldn't be asked for bytes")
+        override val isNodeRef: Boolean
+            get() = true
+        override val isBytesRef: Boolean
+            get() = false
+    }
+
+    @JvmInline
+    value class BytesRef internal constructor(override val bytes: ByteArray) : ClassRef {
+        override fun nodeRef(): NodeRef {
+            val reader = ClassReader(this.bytes)
+            return NodeRef(ClassNode().also { reader.accept(it, ClassReader.EXPAND_FRAMES) })
         }
-    val node
-        get() = this.internalNode!!
+
+        override fun bytesRef(): BytesRef = this
+        override val node: ClassNode
+            get() = throw IllegalAccessException("Bytes shouldn't be asked for a node")
+        override val isNodeRef: Boolean
+            get() = false
+        override val isBytesRef: Boolean
+            get() = true
+    }
+
+    fun nodeRef(): NodeRef
+    fun bytesRef(): BytesRef
+    val node: ClassNode
+    val bytes: ByteArray
+
+    val isNodeRef: Boolean
+    val isBytesRef: Boolean
+}
+
+data class ClassContainer(val name: String, private var ref: ClassRef, var skip: Boolean = false) : ClassRef {
+    constructor(name: String, bytes: ByteArray) : this(name, ClassRef.BytesRef(bytes))
+
+    // Always call when modifying bytes
+    fun newBytes(bytes: ByteArray) {
+        this.ref = ClassRef.BytesRef(bytes)
+    }
+
+    override fun nodeRef(): ClassRef.NodeRef {
+        this.ref = this.ref.nodeRef()
+        return this.ref as ClassRef.NodeRef
+    }
+
+    override fun bytesRef(): ClassRef.BytesRef {
+        this.ref = this.ref.bytesRef()
+        return this.ref as ClassRef.BytesRef
+    }
+
+    override val node: ClassNode
+        get() = this.nodeRef().node
+    override val bytes: ByteArray
+        get() = this.bytesRef().bytes
+    override val isNodeRef: Boolean
+        get() = this.ref.isNodeRef
+    override val isBytesRef: Boolean
+        get() = this.ref.isBytesRef
 }
 
 // message should have the following form: <text> {}(becomes action count) <text> {}(becomes total time in seconds) <text> {}(becomes average time in milliseconds)

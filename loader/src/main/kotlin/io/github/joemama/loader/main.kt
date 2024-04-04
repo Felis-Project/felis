@@ -8,7 +8,7 @@ import io.github.joemama.loader.meta.ModDiscoverer
 import io.github.joemama.loader.mixin.MixinLoaderPlugin
 import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.side.SideStrippingTransformation
-import io.github.joemama.loader.transformer.ClassData
+import io.github.joemama.loader.transformer.ClassContainer
 import org.slf4j.LoggerFactory
 
 import java.net.URL
@@ -47,9 +47,9 @@ data class GameJar(val jarLoc: Path) {
 
 object DebugTransformation : Transformation {
     private val logger = LoggerFactory.getLogger(DebugTransformation::class.java)
-    override fun transform(classData: ClassData) {
-        if (classData.name == "net.minecraft.client.main.Main") {
-            val clazz = classData.node
+    override fun transform(container: ClassContainer) {
+        if (container.name == "net.minecraft.client.main.Main") {
+            val clazz = container.node
             this.logger.info("Transforming $clazz with DebugTransformation")
             val mainMethod = clazz.methods.first {
                 it.name == "main" && it.desc == Type.getMethodDescriptor(
