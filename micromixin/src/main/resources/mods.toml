@@ -1,0 +1,8 @@
+name="MicroMixin"
+version = "1.0-ALPHA"
+description = "An implementation of MicroMixin from StianLoader as a loader plugin"
+modid = "micromixin"
+
+[[entrypoints]]
+id = "loader_plugin"
+class = "io.github.joemama.loader.micromixin.MicroMixinLoaderPlugin"

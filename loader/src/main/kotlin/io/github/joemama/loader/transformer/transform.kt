@@ -8,7 +8,6 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.spongepowered.asm.transformers.MixinClassWriter
 import java.io.InputStream
 import java.net.JarURLConnection
 import java.net.URL
@@ -190,7 +189,7 @@ sealed interface ClassRef {
         override fun nodeRef(): NodeRef = this
 
         override fun bytesRef(): BytesRef {
-            val writer = MixinClassWriter(ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
+            val writer = ClassWriter(0)
             this.node.accept(writer)
             return BytesRef(writer.toByteArray())
         }

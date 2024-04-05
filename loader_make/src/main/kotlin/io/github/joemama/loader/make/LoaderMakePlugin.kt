@@ -3,8 +3,10 @@ package io.github.joemama.loader.make
 import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.gradle.ext.IdeaExtPlugin
+import org.jetbrains.kotlin.gradle.plugin.*
 import java.net.http.HttpClient
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -35,6 +37,10 @@ class LoaderMakePlugin : Plugin<Project> {
                 it.url = project.uri("https://repo.repsy.io/mvn/0xjoemama/public")
                 it.name = "Loader Repo"
             }
+            maven {
+                it.url = project.uri("https://stianloader.org/maven/")
+                it.name = "Stianloader"
+            }
         }
 
         project.buildscript.apply {
@@ -45,23 +51,12 @@ class LoaderMakePlugin : Plugin<Project> {
         }
 
         project.plugins.apply {
-            apply("java")
-            apply("idea")
+            apply(JavaBasePlugin::class.java)
             apply(IdeaExtPlugin::class.java)
+            apply(KotlinPluginWrapper::class.java)
         }
 
-        val mcLibs = project.configurations.create("minecraftLibrary") {
-            it.isCanBeResolved = true
-            it.isTransitive = false
-        }
-        val modLoader = project.configurations.create("modLoader") {
-            it.isCanBeResolved = true
-        }
-        val modImplementation = project.configurations.create("modImplementation") {
-            it.isCanBeResolved = true
-            it.isTransitive = false
-        }
-        project.configurations.getByName("implementation").extendsFrom(mcLibs, modLoader, modImplementation)
+        LoaderMakeConfigurations.createConfigurations(project)
 
         piston = Piston(project)
         LibraryFetcher(project, "1.20.4").includeLibs()

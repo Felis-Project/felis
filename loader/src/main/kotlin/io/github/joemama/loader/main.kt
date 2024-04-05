@@ -5,7 +5,6 @@ import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.enum
 import io.github.joemama.loader.meta.ModDiscoverer
-import io.github.joemama.loader.mixin.MixinLoaderPlugin
 import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.side.SideStrippingTransformation
 import io.github.joemama.loader.transformer.ClassContainer
@@ -116,7 +115,7 @@ object ModLoader {
         }
 
         // TODO: Hardcoded for now
-        MixinLoaderPlugin().onLoaderInit()
+        // MixinLoaderPlugin().onLoaderInit()
 
         this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
     }
@@ -153,12 +152,6 @@ class ModLoaderCommand : CliktCommand() {
     private val gameJarPath: String by option("--source")
         .help("Define the source jar to run the game from")
         .required()
-
-    @Suppress("unused") // TODO: Add lib handling
-    private val libs: List<String> by option("--libs")
-        .help("Define jars included at runtime but not transformed")
-        .split(":")
-        .default(emptyList())
     private val gameArgs: String by option("--args")
         .help("Arguments passed into the main method of the game")
         .default("")

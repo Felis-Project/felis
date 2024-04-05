@@ -1,5 +1,7 @@
 package io.github.joemama.loader.mixin
 
+/**
+ * Currently removed as we have switched to Micromixin
 import io.github.joemama.loader.LoaderPluginEntrypoint
 import io.github.joemama.loader.ModLoader
 import io.github.joemama.loader.transformer.ClassContainer
@@ -175,3 +177,4 @@ class MixinLoaderPlugin : LoaderPluginEntrypoint {
         ModLoader.transformer.registerInternal(MixinTransformation)
     }
 }
+*/

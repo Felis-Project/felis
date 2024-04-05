@@ -1,9 +1,7 @@
 plugins {
-    kotlin("jvm")
     id("loader-make")
     kotlin("plugin.serialization") version "1.9.23"
     `maven-publish`
-    idea
 }
 
 val asmVersion = "9.5"
@@ -18,9 +16,6 @@ dependencies {
     implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
     // For command line argument parsing
     implementation("com.github.ajalt.clikt:clikt:4.3.0")
-    // Mixin for MixinClassWriter for now + mixin functionality
-    // TODO: Move this to a loader plugin
-    api("org.spongepowered:mixin:0.8.5")
 }
 
 publishing {

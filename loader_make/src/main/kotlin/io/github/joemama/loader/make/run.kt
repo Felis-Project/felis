@@ -1,11 +1,7 @@
 package io.github.joemama.loader.make
 
 import org.gradle.api.Project
-import org.gradle.api.file.FileCollection
-import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.BasePluginExtension
-import org.gradle.api.provider.ListProperty
-import org.gradle.api.provider.Property
 import org.gradle.api.tasks.JavaExec
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.jetbrains.gradle.ext.Application
@@ -26,21 +22,6 @@ data class ModRun(
     val args: List<String> = emptyList(),
     val taskDependencies: List<String> = emptyList()
 ) {
-    private val cp: FileCollection by lazy {
-        val mcLibs = project.configurations.getByName("minecraftLibrary")
-        val modLoader = project.configurations.getByName("modLoader")
-        mcLibs + modLoader
-    }
-
-    private val modFiles: ListProperty<File> by lazy {
-        val modImplementation = project.configurations.getByName("modImplementation")
-        val modFiles = project.objects.listProperty(File::class.java)
-        // TODO: Don't resolve it here
-        modFiles.addAll(modImplementation.asFileTree)
-        modFiles.add(project.extensions.getByType(BasePluginExtension::class.java).libsDirectory.asFile)
-        modFiles
-    }
-
     fun ideaRun() {
         project.extensions.getByType(IdeaModel::class.java).project?.settings?.runConfigurations?.apply {
             val loggerCfgFile = project.layout.buildDirectory.file("log4j2.xml")
@@ -66,16 +47,22 @@ data class ModRun(
                 includeProvidedDependencies = false
                 jvmArgs += listOf(
                     "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}",
-                    "-cp", cp.files.joinToString(":") { it.path }
+                    "-cp", LoaderMakeConfigurations.loadingClasspath.files.joinToString(":") { it.path }
                 )
                 programParameters = listOf(
-                    "--mods", this@ModRun.modFiles.get().joinToString(":") { it.path },
+                    "--mods", this@ModRun.getModRuntime(),
                     "--source", this@ModRun.sourceJar.path,
                     "--side", this@ModRun.side.name,
-                    "--args", this@ModRun.args.joinToString(" ")
+                    "--args", this@ModRun.args.joinToString(" "),
                 ).joinToString(" ")
             }
         }
+    }
+
+    private fun getModRuntime(): String {
+        val modRuntime = LoaderMakeConfigurations.modRuntimeOnly.files
+        modRuntime.add(project.extensions.getByType(BasePluginExtension::class.java).libsDirectory.get().asFile)
+        return modRuntime.joinToString(":") { it.path }
     }
 
     fun gradleTask() {
@@ -98,18 +85,16 @@ data class ModRun(
 
             it.group = "minecraft"
             it.mainClass.set("io.github.joemama.loader.MainKt")
-            it.classpath = this.cp
-
-            val modPaths = modFiles.get().joinToString(separator = ":") { it.path }
+            it.classpath = LoaderMakeConfigurations.loadingClasspath
 
             it.jvmArgs(
                 "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"
             )
             it.args(
-                "--mods", modPaths,
+                "--mods", this.getModRuntime(),
                 "--source", this.sourceJar.path,
                 "--side", this.side.name,
-                "--args", this.args.joinToString(" ")
+                "--args", this.args.joinToString(" "),
             )
         }
     }

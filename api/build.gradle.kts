@@ -1,5 +1,4 @@
 plugins {
-    kotlin("jvm")
     id("loader-make")
     `maven-publish`
 }
@@ -9,6 +8,7 @@ version = "1.0-ALPHA"
 
 dependencies {
     modLoader(project(":loader"))
+    modImplementation(project(":micromixin"))
 }
 
 publishing {

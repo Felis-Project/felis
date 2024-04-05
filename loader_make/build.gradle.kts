@@ -24,8 +24,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     implementation("org.benf:cfr:0.152")
-
     implementation("gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext:1.1.8")
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.23")
 }
 
 gradlePlugin {
@@ -45,5 +45,6 @@ publishing {
                 password = System.getenv("REPSY_PASSWORD")
             }
         }
+        mavenLocal()
     }
 }

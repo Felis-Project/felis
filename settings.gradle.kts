@@ -9,4 +9,4 @@ rootProject.name = "ModLoader"
 includeBuild("loader_make")
 include("loader")
 include("api")
-
+include("micromixin")
