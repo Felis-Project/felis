@@ -27,6 +27,7 @@ class LoaderMakePlugin : Plugin<Project> {
     }
 
     override fun apply(project: Project) {
+        println("Applied")
         project.repositories.apply {
             mavenCentral()
             maven {
@@ -55,8 +56,6 @@ class LoaderMakePlugin : Plugin<Project> {
             apply(IdeaExtPlugin::class.java)
             apply(KotlinPluginWrapper::class.java)
         }
-
-        LoaderMakeConfigurations.createConfigurations(project)
 
         piston = Piston(project)
         LibraryFetcher(project, "1.20.4").includeLibs()

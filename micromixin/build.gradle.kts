@@ -9,13 +9,10 @@ version = "1.0-ALPHA"
 val mmVersion = "0.4.0-a20240227"
 
 dependencies {
-    modLoader(project(":loader"))
-    "org.stianloader:micromixin-annotations:$mmVersion".let {
-        compileOnly(it)
-        api(it)
-    }
-    loadingClasspath("org.stianloader:micromixin-runtime:$mmVersion")
-    loadingClasspath("org.stianloader:micromixin-transformer:$mmVersion")
+    implementation(project(":loader"))
+    compileOnlyApi("org.stianloader:micromixin-annotations:$mmVersion")
+    runtimeOnly("org.stianloader:micromixin-runtime:$mmVersion")
+    implementation("org.stianloader:micromixin-transformer:$mmVersion")
 }
 
 publishing {

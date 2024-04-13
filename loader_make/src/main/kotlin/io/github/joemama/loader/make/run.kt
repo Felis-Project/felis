@@ -9,6 +9,7 @@ import org.jetbrains.gradle.ext.GradleTask
 import org.jetbrains.gradle.ext.runConfigurations
 import org.jetbrains.gradle.ext.settings
 import java.io.File
+import java.util.jar.JarFile
 
 enum class Side {
     CLIENT, SERVER
@@ -43,14 +44,15 @@ data class ModRun(
                     this@ModRun.taskDependencies.map { GradleTask(it) }.forEach(beforeRun::add)
                 }
 
+                val cps = createClasspaths()
                 mainClass = "io.github.joemama.loader.MainKt"
                 includeProvidedDependencies = false
                 jvmArgs += listOf(
                     "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}",
-                    "-cp", LoaderMakeConfigurations.loadingClasspath.files.joinToString(":") { it.path }
+                    "-cp", cps.loadingPaths,
                 )
                 programParameters = listOf(
-                    "--mods", this@ModRun.getModRuntime(),
+                    "--mods", cps.gamePaths,
                     "--source", this@ModRun.sourceJar.path,
                     "--side", this@ModRun.side.name,
                     "--args", this@ModRun.args.joinToString(" "),
@@ -59,12 +61,29 @@ data class ModRun(
         }
     }
 
-    private fun getModRuntime(): String {
+    data class Classpaths(val loading: List<File>, val game: List<File>) {
+        val gamePaths = this.game.joinToString(File.pathSeparator) { it.path }
+        val loadingPaths = this.loading.joinToString(File.pathSeparator) { it.path }
+    }
+
+    private fun createClasspaths(): Classpaths {
+        val runtimeOnly = project.configurations.getByName("runtimeClasspath")
+        val mods = project.configurations.create("modRuntime") {
+            it.extendsFrom(runtimeOnly)
+            it.isCanBeResolved = true
+            it.isCanBeConsumed = false
+            it.isVisible = false
+        }
+        val loading = mutableListOf<File>()
+        val game = mutableListOf<File>()
+        for (mod in mods) {
+            JarFile(mod).getJarEntry("mods.toml")?.let {
+                game.add(mod)
+            } ?: loading.add(mod)
+        }
         val jar = project.tasks.getByName("jar") as Jar
-        val modJar = jar.archiveFile.get().asFile
-        val modRuntime = LoaderMakeConfigurations.modRuntime.files.toMutableList()
-        modRuntime.add(modJar)
-        return modRuntime.joinToString(":") { it.path }
+        game.add(jar.archiveFile.get().asFile)
+        return Classpaths(loading, game)
     }
 
     fun gradleTask() {
@@ -85,15 +104,18 @@ data class ModRun(
             it.dependsOn("build")
             this.taskDependencies.forEach(it::dependsOn)
 
+            val cps = this.createClasspaths()
             it.group = "minecraft"
             it.mainClass.set("io.github.joemama.loader.MainKt")
-            it.classpath = LoaderMakeConfigurations.loadingClasspath
+            it.classpath = project.objects.fileCollection().also {
+                it.from(cps.loading)
+            }
 
             it.jvmArgs(
                 "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"
             )
             it.args(
-                "--mods", this.getModRuntime(),
+                "--mods", cps.gamePaths,
                 "--source", this.sourceJar.path,
                 "--side", this.side.name,
                 "--args", this.args.joinToString(" "),

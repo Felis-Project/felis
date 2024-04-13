@@ -78,38 +78,9 @@ class StripLocator : ClassVisitor(Opcodes.ASM9) {
     }
 }
 
-// TODO: Switch to the commented out version, once we figure out mixin efficiency(aka stop parsing all classes as nodes)
 object SideStrippingTransformation : Transformation {
     override fun transform(container: ClassContainer) {
-        container.node.visibleAnnotations?.find { it.desc == Type.getDescriptor(OnlyIn::class.java) }?.let {
-            @Suppress("UNCHECKED_CAST")
-            val value = (it.values[1] as Array<String>)[1]
-            val side = enumValueOf<Side>(value)
-            if (side != ModLoader.side) container.skip = true
-        }
-
-        if (container.skip) return
-
-        container.node.methods.removeIf { method ->
-            method.visibleAnnotations?.find { it.desc == Type.getDescriptor(OnlyIn::class.java) }?.let {
-                @Suppress("UNCHECKED_CAST")
-                val value = (it.values[1] as Array<String>)[1]
-                val side = enumValueOf<Side>(value)
-                side != ModLoader.side
-            } ?: false
-        }
-
-        container.node.fields.removeIf { field ->
-            field.visibleAnnotations?.find { it.desc == Type.getDescriptor(OnlyIn::class.java) }?.let {
-                @Suppress("UNCHECKED_CAST")
-                val value = (it.values[1] as Array<String>)[1]
-                val side = enumValueOf<Side>(value)
-                side != ModLoader.side
-            } ?: false
-        }
-
-        // Currently does nothing
-        // TODO: Change this once we get an efficient mixin implementation
+        // since all classes are passed into this transformation, we better not reparse them
         if (container.isBytesRef) {
             val locator = StripLocator()
             val reader = ClassReader(container.bytes)
@@ -127,6 +98,33 @@ object SideStrippingTransformation : Transformation {
             reader.accept(stripper, 0)
 
             container.newBytes(writer.toByteArray())
+        } else {
+            container.node.visibleAnnotations?.find { it.desc == Type.getDescriptor(OnlyIn::class.java) }?.let {
+                @Suppress("UNCHECKED_CAST")
+                val value = (it.values[1] as Array<String>)[1]
+                val side = enumValueOf<Side>(value)
+                if (side != ModLoader.side) container.skip = true
+            }
+
+            if (container.skip) return
+
+            container.node.methods.removeIf { method ->
+                method.visibleAnnotations?.find { it.desc == Type.getDescriptor(OnlyIn::class.java) }?.let {
+                    @Suppress("UNCHECKED_CAST")
+                    val value = (it.values[1] as Array<String>)[1]
+                    val side = enumValueOf<Side>(value)
+                    side != ModLoader.side
+                } ?: false
+            }
+
+            container.node.fields.removeIf { field ->
+                field.visibleAnnotations?.find { it.desc == Type.getDescriptor(OnlyIn::class.java) }?.let {
+                    @Suppress("UNCHECKED_CAST")
+                    val value = (it.values[1] as Array<String>)[1]
+                    val side = enumValueOf<Side>(value)
+                    side != ModLoader.side
+                } ?: false
+            }
         }
     }
 }

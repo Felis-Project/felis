@@ -13,9 +13,9 @@ dependencies {
     api("org.ow2.asm:asm-commons:$asmVersion")
     api("org.ow2.asm:asm-util:$asmVersion")
     // For metadata parsing
-    loadingClasspath("net.peanuuutz.tomlkt:tomlkt:0.3.7")
+    implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
     // For command line argument parsing
-    loadingClasspath("com.github.ajalt.clikt:clikt:4.3.0")
+    implementation("com.github.ajalt.clikt:clikt:4.3.0")
 }
 
 publishing {

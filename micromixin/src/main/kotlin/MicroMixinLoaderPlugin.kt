@@ -5,6 +5,7 @@ import io.github.joemama.loader.ModLoader
 import io.github.joemama.loader.transformer.ClassContainer
 import io.github.joemama.loader.transformer.Transformation
 import io.github.joemama.loader.transformer.TransformingClassLoader
+import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -29,7 +30,7 @@ class MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
                 loader.getClassData(name)?.node ?: throw ClassNotFoundException("Invalid mixin class $name")
             }, this.classWrappers).also {
                 it.logger = MMLogger(this.logger)
-                it.isMergingClassFileVersions
+                it.setMergeClassFileVersions(false)
             }
     }
 
@@ -43,10 +44,19 @@ class MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
         ModLoader.transformer.registerInternal(MicroMixinTransformation)
     }
 
+    class MMClassWriter : ClassWriter(COMPUTE_FRAMES) {
+        override fun getCommonSuperClass(type1: String, type2: String): String =
+            transformer.pool.getCommonSuperClass(transformer.pool.get(type1), transformer.pool.get(type2)).name
+    }
+
     object MicroMixinTransformation : Transformation {
         override fun transform(container: ClassContainer) {
-            if (transformer.isMixinTarget(container.name)) {
+            if (transformer.isMixinTarget(container.internalName)) {
                 transformer.transform(container.node)
+                with(MMClassWriter()) {
+                    container.node.accept(this)
+                    container.newBytes(this.toByteArray())
+                }
             }
         }
     }

@@ -1,5 +1,5 @@
 name="Testmod"
-version = "1.0.0"
+version = "1.0-ALPHA"
 description = "An API for the ModLoader project"
 modid = "loader_api"
 

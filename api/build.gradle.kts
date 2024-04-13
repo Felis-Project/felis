@@ -14,8 +14,8 @@ repositories {
 }
 
 dependencies {
-    modLoader(project(":loader"))
-    modImplementation(project(":micromixin"))
+    implementation(project(":loader"))
+    implementation(project(":micromixin"))
 }
 
 publishing {

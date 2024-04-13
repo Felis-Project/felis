@@ -4,6 +4,8 @@ package io.github.joemama.loader.api.client
 
 import io.github.joemama.loader.ModLoader
 import io.github.joemama.loader.asm.openMethod
+import io.github.joemama.loader.side.OnlyIn
+import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.transformer.ClassContainer
 import io.github.joemama.loader.transformer.Transformation
 import net.minecraft.client.Options
@@ -13,11 +15,13 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 
+@OnlyIn(Side.CLIENT)
 interface ClientEntrypoint {
     fun onClientInit()
 }
 
 @Suppress("unused")
+@OnlyIn(Side.CLIENT)
 fun clientApiInit() {
     ModLoader.callEntrypoint("client", ClientEntrypoint::onClientInit)
 }

@@ -7,19 +7,13 @@ import com.github.ajalt.clikt.parameters.types.enum
 import io.github.joemama.loader.meta.ModDiscoverer
 import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.side.SideStrippingTransformation
-import io.github.joemama.loader.transformer.ClassContainer
+import io.github.joemama.loader.transformer.*
 import org.slf4j.LoggerFactory
 
-import java.net.URL
-import java.net.URI
 import java.nio.file.Paths
-import java.nio.file.Path
 import java.lang.invoke.MethodType
 import java.lang.invoke.MethodHandles
 
-import io.github.joemama.loader.transformer.TransformingClassLoader
-import io.github.joemama.loader.transformer.Transformation
-import io.github.joemama.loader.transformer.Transformer
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.FieldInsnNode
@@ -27,21 +21,11 @@ import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.slf4j.Logger
+import java.io.File
 import java.io.PrintStream
-import java.util.jar.JarFile
 
 interface LoaderPluginEntrypoint {
     fun onLoaderInit()
-}
-
-data class GameJar(val jarLoc: Path) {
-    val jarFile: JarFile = JarFile(jarLoc.toFile())
-    private val absolutePath by lazy { this.jarLoc.toAbsolutePath() }
-    private val jarUri: String by lazy {
-        URI.create("jar:${this.absolutePath.toUri().toURL()}!/").toString()
-    }
-
-    fun getContentUrl(name: String): URL = URI.create(this.jarUri + name).toURL()
 }
 
 object DebugTransformation : Transformation {
@@ -89,7 +73,7 @@ object ModLoader {
     private val logger: Logger = LoggerFactory.getLogger(ModLoader::class.java)
     lateinit var discoverer: ModDiscoverer
         private set
-    lateinit var gameJar: GameJar
+    lateinit var gameJar: JarContentCollection
         private set
     lateinit var classLoader: TransformingClassLoader
         private set
@@ -101,7 +85,7 @@ object ModLoader {
         this.logger.info("starting mod loader")
         this.side = side
         this.discoverer = ModDiscoverer(mods)
-        this.gameJar = GameJar(Paths.get(sourceJar))
+        this.gameJar = JarContentCollection(Paths.get(sourceJar))
 
         this.classLoader = TransformingClassLoader()
 
@@ -114,16 +98,17 @@ object ModLoader {
             registerInternal(SideStrippingTransformation)
         }
 
-        // TODO: Hardcoded for now
-        // MixinLoaderPlugin().onLoaderInit()
-
         this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
     }
 
     fun start(owner: String, method: String, desc: String, params: Array<String>) {
         this.logger.info("starting game")
-        this.logger.debug("target game jars: {}", this.gameJar.jarLoc)
+        this.logger.debug("target game jars: {}", this.gameJar.path)
         this.logger.debug("game args: ${params.contentToString()}")
+        this.logger.info("mods currently running: ")
+        this.discoverer.mods.forEach {
+            this.logger.info("- ${it.meta.modid}: ${it.meta.version}")
+        }
 
         val mainClass = this.classLoader.loadClass(owner)
         val mainMethod = MethodHandles.lookup().findStatic(
@@ -147,7 +132,7 @@ object ModLoader {
 class ModLoaderCommand : CliktCommand() {
     private val mods: List<String> by option("--mods")
         .help("All directories and jar files to look for mods in separated by ':'")
-        .split(":")
+        .split(File.pathSeparator)
         .default(emptyList())
     private val gameJarPath: String by option("--source")
         .help("Define the source jar to run the game from")
