@@ -6,6 +6,13 @@ plugins {
 group = "io.github.joemama"
 version = "1.0-ALPHA"
 
+repositories {
+    maven {
+        url = project.uri("https://repo.repsy.io/mvn/0xjoemama/public")
+        name = "Loader Repo"
+    }
+}
+
 dependencies {
     modLoader(project(":loader"))
     modImplementation(project(":micromixin"))

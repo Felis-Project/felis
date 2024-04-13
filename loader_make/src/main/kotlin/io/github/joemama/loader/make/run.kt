@@ -1,8 +1,8 @@
 package io.github.joemama.loader.make
 
 import org.gradle.api.Project
-import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.tasks.JavaExec
+import org.gradle.jvm.tasks.Jar
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.jetbrains.gradle.ext.Application
 import org.jetbrains.gradle.ext.GradleTask
@@ -60,8 +60,10 @@ data class ModRun(
     }
 
     private fun getModRuntime(): String {
-        val modRuntime = LoaderMakeConfigurations.modRuntimeOnly.files
-        modRuntime.add(project.extensions.getByType(BasePluginExtension::class.java).libsDirectory.get().asFile)
+        val jar = project.tasks.getByName("jar") as Jar
+        val modJar = jar.archiveFile.get().asFile
+        val modRuntime = LoaderMakeConfigurations.modRuntime.files.toMutableList()
+        modRuntime.add(modJar)
         return modRuntime.joinToString(":") { it.path }
     }
 
@@ -95,6 +97,7 @@ data class ModRun(
                 "--source", this.sourceJar.path,
                 "--side", this.side.name,
                 "--args", this.args.joinToString(" "),
+                "--print-cp", "true"
             )
         }
     }

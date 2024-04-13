@@ -3,7 +3,7 @@ package io.github.joemama.loader.make
 import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.plugins.JavaBasePlugin
+import org.gradle.api.plugins.JavaLibraryPlugin
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.gradle.ext.IdeaExtPlugin
 import org.jetbrains.kotlin.gradle.plugin.*
@@ -51,7 +51,7 @@ class LoaderMakePlugin : Plugin<Project> {
         }
 
         project.plugins.apply {
-            apply(JavaBasePlugin::class.java)
+            apply(JavaLibraryPlugin::class.java)
             apply(IdeaExtPlugin::class.java)
             apply(KotlinPluginWrapper::class.java)
         }
@@ -96,7 +96,8 @@ class LoaderMakePlugin : Plugin<Project> {
                 "--gameDir", "run",
                 "--assetsDir", downloadAssetsTask.get().assetDir.get().asFile.path,
                 "--assetIndex", piston.getVersion("1.20.4").assetIndex.id
-            )
+            ),
+            taskDependencies = listOf("downloadAssets")
         )
 
         val serverRun = ModRun(
