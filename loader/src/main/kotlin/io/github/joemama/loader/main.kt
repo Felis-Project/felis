@@ -132,7 +132,7 @@ object ModLoader {
     }
 }
 
-class ModLoaderCommand : CliktCommand() {
+internal class ModLoaderCommand : CliktCommand() {
     private val mods: List<String> by option("--mods")
         .help("All directories and jar files to look for mods in separated by ':'")
         .split(File.pathSeparator)

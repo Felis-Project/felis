@@ -15,7 +15,7 @@ import java.util.*
 
 sealed interface ClassRef {
     @JvmInline
-    value class NodeRef internal constructor(override val node: ClassNode) : ClassRef {
+    value class NodeRef(override val node: ClassNode) : ClassRef {
         override fun nodeRef(): NodeRef = this
 
         override fun bytesRef(): BytesRef {
@@ -33,7 +33,7 @@ sealed interface ClassRef {
     }
 
     @JvmInline
-    value class BytesRef internal constructor(override val bytes: ByteArray) : ClassRef {
+    value class BytesRef(override val bytes: ByteArray) : ClassRef {
         override fun nodeRef(): NodeRef {
             val reader = ClassReader(this.bytes)
             return NodeRef(ClassNode().also { reader.accept(it, ClassReader.EXPAND_FRAMES) })
@@ -57,7 +57,10 @@ sealed interface ClassRef {
     val isBytesRef: Boolean
 }
 
-data class ClassContainer(val name: String, private var ref: ClassRef, var skip: Boolean = false) : ClassRef {
+data class ClassContainer internal constructor(val name: String, private var ref: ClassRef, var skip: Boolean = false) :
+    ClassRef {
+    constructor(name: String, ref: ClassRef) : this(name, ref, false)
+
     val internalName by lazy { this.name.replace(".", "/") }
 
     constructor(name: String, bytes: ByteArray) : this(name, ClassRef.BytesRef(bytes))
@@ -89,16 +92,17 @@ data class ClassContainer(val name: String, private var ref: ClassRef, var skip:
 
 interface Transformation {
     fun transform(container: ClassContainer)
+
+    data class Named(
+        val transformation: Transformation,
+        val transformationName: String
+    ) : Transformation by transformation
 }
 
-data class SimpleTransformation(
-    val transformation: Transformation,
-    val transformationName: String
-) : Transformation by transformation
 
 class Transformer : Transformation {
     private val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
-    private val external: Multimap<String, Lazy<SimpleTransformation>> = MultimapBuilder.ListMultimapBuilder
+    private val external: Multimap<String, Lazy<Transformation.Named>> = MultimapBuilder.ListMultimapBuilder
         .hashKeys()
         .arrayListValues()
         .build()
@@ -109,7 +113,7 @@ class Transformer : Transformation {
             this.external.put(
                 target,
                 lazy {
-                    SimpleTransformation(
+                    Transformation.Named(
                         Class.forName(clazz, true, ModLoader.classLoader)
                             .getDeclaredConstructor()
                             .newInstance() as Transformation,
@@ -156,16 +160,18 @@ class Transformer : Transformation {
  */
 class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     private val logger: Logger = LoggerFactory.getLogger(TransformingClassLoader::class.java)
-    private val classLoadPerfCounter = PerfCounter("Loaded {} class data in {}s, Average load time {}ms")
+    private val classLoadPerfCounter = PerfCounter("Loaded {} class data in {}s, Average load time {}ms", wait = true)
     private val transformationPerfCounter =
-        PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms")
+        PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms", wait = true)
 
     private val contentCollection: ContentCollection by lazy {
-        object : NestedContentCollection {
-            override val children: Iterable<ContentCollection>
-                get() = mutableListOf<ContentCollection>(ModLoader.gameJar).also { it.addAll(ModLoader.discoverer.mods) }
-                    .also { it.addAll(ModLoader.discoverer.libs) }
-        }
+        NestedContentCollection(
+            mutableListOf<ContentCollection>().also {
+                it.add(ModLoader.gameJar) // gameJar has to always go first because of some minecraft weirdness
+                it.addAll(ModLoader.discoverer.mods)
+                it.addAll(ModLoader.discoverer.libs)
+            }
+        )
     }
 
     fun getClassData(name: String): ClassContainer? {
@@ -198,8 +204,11 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
             }
         }
 
-        return super.findClass(name)
+        return null
     }
+
+    fun defineClass(container: ClassContainer): Class<*> =
+        this.defineClass(container.name, container.bytes, 0, container.bytes.size)
 
     override fun findResource(name: String): URL? {
         val targetUrl = this.contentCollection.getContentUrl(name)
@@ -210,19 +219,8 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
         return null
     }
 
-    override fun findResources(name: String): Enumeration<URL> {
-        val urls = mutableListOf<URL>()
-        var targetUrl = ModLoader.gameJar.getContentUrl(name)
-        if (targetUrl != null) urls.add(targetUrl)
-
-        for (mod in ModLoader.discoverer.mods) {
-            targetUrl = mod.getContentUrl(name)
-
-            if (targetUrl != null) urls.add(targetUrl)
-        }
-
-        return Collections.enumeration(urls)
-    }
+    override fun findResources(name: String): Enumeration<URL> =
+        Collections.enumeration(this.contentCollection.getContentUrls(name))
 
     companion object {
         init {

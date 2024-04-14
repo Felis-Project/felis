@@ -41,6 +41,7 @@ class MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
                 transformer.addMixin(ModLoader.classLoader, MixinConfig.fromString(String(it)))
             }
         }
+
         ModLoader.transformer.registerInternal(MicroMixinTransformation)
     }
 

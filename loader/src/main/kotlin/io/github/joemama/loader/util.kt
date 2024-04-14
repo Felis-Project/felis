@@ -6,7 +6,7 @@ import kotlin.time.DurationUnit
 import kotlin.time.measureTime
 
 // message should have the following form: <text> {}(becomes action count) <text> {}(becomes total time in seconds) <text> {}(becomes average time in milliseconds)
-class PerfCounter(private val message: String) {
+class PerfCounter(private val message: String, wait: Boolean = false) {
     companion object {
         private val logger = LoggerFactory.getLogger(PerfCounter::class.java)
         private val counters: MutableList<PerfCounter> = mutableListOf()
@@ -21,7 +21,8 @@ class PerfCounter(private val message: String) {
     }
 
     init {
-        counters.add(this)
+        if (wait)
+            counters.add(this)
     }
 
     var totalDuration: Duration = Duration.ZERO

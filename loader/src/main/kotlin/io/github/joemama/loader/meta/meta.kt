@@ -9,24 +9,22 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import net.peanuuutz.tomlkt.Toml
 import net.peanuuutz.tomlkt.TomlTable
+import org.apache.commons.io.file.AccumulatorPathVisitor
 import org.slf4j.LoggerFactory
 
-import java.io.File
-
-import java.io.FileFilter
-import java.nio.file.Paths
+import java.nio.file.*
+import kotlin.io.path.name
 
 internal val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
 
 data class Mod(val contentCollection: ContentCollection, val meta: ModMeta) : ContentCollection by contentCollection {
     companion object {
-        fun parse(file: File): Mod {
-            val modContentCollection = JarContentCollection(file)
-            val metaToml = modContentCollection.withStream("mods.toml") {
+        fun parse(contentCollection: ContentCollection): Mod {
+            val metaToml = contentCollection.withStream("mods.toml") {
                 String(it.readAllBytes())
             }!! // all mods must provide a mods.toml file
             val meta = Toml.decodeFromString<ModMeta>(metaToml)
-            return Mod(modContentCollection, meta)
+            return Mod(contentCollection, meta)
         }
     }
 }
@@ -42,29 +40,19 @@ class ModDiscoverer(modPaths: List<String>) {
         logger.info("mod discovery running for files $modPaths")
         val perfcounter = PerfCounter("discovered {} mods in {}s. Average mod load time was {}ms")
 
-        for (file in this.modPathsSplit.map { it.toFile() }) {
-            if (file.isDirectory()) {
-                file.mkdirs()
-
-                for (jarfile in file.listFiles(FileFilter { !it.isDirectory() })!!) {
-                    perfcounter.timed {
-                        try {
-                            this.internalMods.add(Mod.parse(jarfile))
-                        } catch (e: SerializationException) {
-                            throw IllegalArgumentException("File ${jarfile.name} has a malformatted mods.toml file")
-                        } catch (e: Exception) {
-                            this.libs.add(JarContentCollection(jarfile))
-                        }
-                    }
-                }
-            } else {
+        for (file in this.modPathsSplit) {
+            val acc = AccumulatorPathVisitor()
+            Files.walkFileTree(file, acc)
+            for (candidate in acc.fileList) {
                 perfcounter.timed {
+                    val contentCollection = JarContentCollection(candidate.toFile())
                     try {
-                        this.internalMods.add(Mod.parse(file))
+                        val mod = Mod.parse(contentCollection)
+                        this.internalMods.add(mod)
                     } catch (e: SerializationException) {
-                        throw IllegalArgumentException("File ${file.name} has a malformatted mods.toml file")
+                        throw IllegalArgumentException("Mod candidate ${candidate.name} had a malformatted mods.toml file")
                     } catch (e: Exception) {
-                        this.libs.add(JarContentCollection(file))
+                        this.libs.add(contentCollection)
                     }
                 }
             }
