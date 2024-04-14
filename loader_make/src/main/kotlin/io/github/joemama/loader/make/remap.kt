@@ -180,18 +180,10 @@ class ProguardRemapper(mappings: File) : Remapper() {
 
 class VariableRenamingMethodVisitor(visitor: MethodVisitor, remapper: Remapper) : MethodRemapper(visitor, remapper) {
     private var internalParameterCount = 0
-    private var internalVariableCount = 0
+
+    // private var internalVariableCount = 0
     override fun visitParameter(name: String, access: Int) =
         super.visitParameter("p${this.internalParameterCount++}", access)
-
-    override fun visitLocalVariable(
-        name: String,
-        descriptor: String,
-        signature: String?,
-        start: Label,
-        end: Label,
-        index: Int
-    ) = super.visitLocalVariable("v${this.internalVariableCount++}", descriptor, signature, start, end, index)
 }
 
 class LoaderMakeClassRemapper(visitor: ClassVisitor, remapper: Remapper) : ClassRemapper(visitor, remapper) {

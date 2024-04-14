@@ -18,11 +18,14 @@ enum class Side {
 data class ModRun(
     val project: Project,
     val name: String,
-    val sourceJar: File,
     val side: Side,
     val args: List<String> = emptyList(),
     val taskDependencies: List<String> = emptyList()
 ) {
+    private val sourceJar by lazy {
+        project.extensions.getByType(LoaderMakePlugin.Extension::class.java).gameJars.merged
+    }
+
     fun ideaRun() {
         project.extensions.getByType(IdeaModel::class.java).project?.settings?.runConfigurations?.apply {
             val loggerCfgFile = project.layout.buildDirectory.file("log4j2.xml")
@@ -104,8 +107,8 @@ data class ModRun(
             it.dependsOn("build")
             this.taskDependencies.forEach(it::dependsOn)
 
-            val cps = this.createClasspaths()
             it.group = "minecraft"
+            val cps = this.createClasspaths()
             it.mainClass.set("io.github.joemama.loader.MainKt")
             it.classpath = project.objects.fileCollection().also {
                 it.from(cps.loading)
@@ -118,8 +121,7 @@ data class ModRun(
                 "--mods", cps.gamePaths,
                 "--source", this.sourceJar.path,
                 "--side", this.side.name,
-                "--args", this.args.joinToString(" "),
-                "--print-cp", "true"
+                "--args", this.args.joinToString(" ")
             )
         }
     }

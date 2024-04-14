@@ -1,6 +1,7 @@
 package io.github.joemama.loader.make
 
 import org.gradle.api.Project
+import java.io.File
 
 class LibraryFetcher(private val project: Project, private val version: String) {
     private val librariesRoot by lazy {
@@ -13,9 +14,7 @@ class LibraryFetcher(private val project: Project, private val version: String) 
         res.set(libDir)
         res
     }
-
-    // TODO: Filter libraries on OS
-    private fun downloadLibs() {
+    val libraries by lazy {
         val root = this.project.objects.directoryProperty()
         root.set(this.librariesRoot)
 
@@ -23,19 +22,20 @@ class LibraryFetcher(private val project: Project, private val version: String) 
         val version = LoaderMakePlugin.piston.getVersion(this.version)
 
         val libs = version.libraries
+        val results = mutableSetOf<File>()
         for (chunk in libs.chunked(10)) {
             chunk.map { it.downloads.artifact }.map { artifact ->
                 val file = root.file(artifact.path).get().asFile
                 fetchFile(artifact.url, file)
-            }.forEach { it.join() }
+            }.map { it.join() }.toCollection(results)
         }
+
+        results
     }
 
     fun includeLibs() {
-        this.downloadLibs()
-
         this.project.dependencies.apply {
-            add("implementation", project.files(librariesRoot.asFileTree.map { it.path }))
+            add("implementation", project.files(this@LibraryFetcher.libraries))
         }
     }
 }

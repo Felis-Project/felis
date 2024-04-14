@@ -23,6 +23,7 @@ import org.objectweb.asm.tree.MethodInsnNode
 import org.slf4j.Logger
 import java.io.File
 import java.io.PrintStream
+import java.io.StringWriter
 
 interface LoaderPluginEntrypoint {
     fun onLoaderInit()
@@ -105,10 +106,12 @@ object ModLoader {
         this.logger.info("starting game")
         this.logger.debug("target game jars: {}", this.gameJar.path)
         this.logger.debug("game args: ${params.contentToString()}")
-        this.logger.info("mods currently running: ")
+        val sw = StringWriter()
+        sw.appendLine("mods currently running: ")
         this.discoverer.mods.forEach {
-            this.logger.info("- ${it.meta.modid}: ${it.meta.version}")
+            sw.appendLine("- ${it.meta.modid}: ${it.meta.version}")
         }
+        this.logger.info(sw.toString())
 
         val mainClass = this.classLoader.loadClass(owner)
         val mainMethod = MethodHandles.lookup().findStatic(

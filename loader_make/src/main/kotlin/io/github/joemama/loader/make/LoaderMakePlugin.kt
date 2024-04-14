@@ -7,9 +7,11 @@ import org.gradle.api.plugins.JavaLibraryPlugin
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.gradle.ext.IdeaExtPlugin
 import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.utils.provider
 import java.net.http.HttpClient
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import javax.inject.Inject
 
 class LoaderMakePlugin : Plugin<Project> {
     companion object {
@@ -26,8 +28,19 @@ class LoaderMakePlugin : Plugin<Project> {
             private set
     }
 
+    abstract class Extension {
+        @get:Inject
+        abstract val project: Project
+
+        var version: String = "1.20.4"
+
+        val gameJars by provider { GameJars(this.project, this.version).prepare() }
+        val libs by provider { LibraryFetcher(this.project, this.version) }
+    }
+
     override fun apply(project: Project) {
-        println("Applied")
+        piston = project.objects.newInstance(Piston::class.java)
+        val ext = project.extensions.create("loaderMake", Extension::class.java)
         project.repositories.apply {
             mavenCentral()
             maven {
@@ -57,13 +70,10 @@ class LoaderMakePlugin : Plugin<Project> {
             apply(KotlinPluginWrapper::class.java)
         }
 
-        piston = Piston(project)
-        LibraryFetcher(project, "1.20.4").includeLibs()
-        val gameJars = GameJars(project, "1.20.4").prepare()
-
+        ext.libs.includeLibs()
         val downloadAssetsTask = project.tasks.register("downloadAssets", DownloadAssetsTask::class.java) {
             it.group = "minecraft"
-            it.version.set("1.20.4")
+            it.version.set(ext.version)
             it.assetDir.set(
                 project.gradle.gradleUserHomeDir
                     .resolve("caches")
@@ -87,14 +97,13 @@ class LoaderMakePlugin : Plugin<Project> {
         val clientRun = ModRun(
             name = "Client",
             project = project,
-            sourceJar = gameJars.merged,
             side = Side.CLIENT,
             args = listOf(
                 "--accessToken", "0",
-                "--version", "1.20.4-JoeLoader",
+                "--version", "${ext.version}-JoeLoader",
                 "--gameDir", "run",
                 "--assetsDir", downloadAssetsTask.get().assetDir.get().asFile.path,
-                "--assetIndex", piston.getVersion("1.20.4").assetIndex.id
+                "--assetIndex", piston.getVersion(ext.version).assetIndex.id
             ),
             taskDependencies = listOf("downloadAssets")
         )
@@ -102,7 +111,6 @@ class LoaderMakePlugin : Plugin<Project> {
         val serverRun = ModRun(
             name = "Server",
             project = project,
-            sourceJar = gameJars.merged,
             side = Side.SERVER,
             args = listOf("nogui")
         )
@@ -112,9 +120,9 @@ class LoaderMakePlugin : Plugin<Project> {
 
         project.tasks.register("genSources", GenSourcesTask::class.java) {
             it.group = "minecraft"
-            it.inputJar.set(gameJars.merged)
-            it.outputJar.set(gameJars.merged.parentFile.resolve(gameJars.merged.nameWithoutExtension + "-sources"))
-        }
+            it.inputJar.set(ext.gameJars.merged)
+            it.outputJar.set(ext.gameJars.merged.parentFile.resolve(ext.gameJars.merged.nameWithoutExtension + "-sources.jar"))
+        }.get()
 
         project.tasks.register("genIdeaRuns") {
             it.group = "minecraft"

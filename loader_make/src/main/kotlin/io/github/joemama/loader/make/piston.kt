@@ -3,10 +3,11 @@ package io.github.joemama.loader.make
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.gradle.api.Project
+import javax.inject.Inject
 
 const val VERSION_MANIFEST: String = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
-class Piston(private val project: Project) {
+open class Piston @Inject constructor(private val project: Project) {
     private val manifestFile = project.layout.buildDirectory.file("version_manifest_v2.json")
     private val versionManifest: VersionManifest by lazy {
         if (!this.manifestFile.get().asFile.exists()) {

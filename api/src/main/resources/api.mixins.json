@@ -4,6 +4,7 @@
   "package": "io.github.joemama.loader.api.mixins",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "MixinMinecraftServer"
   ],
   "client": [
     "client.MixinClientBrandRetriever"

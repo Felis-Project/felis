@@ -7,7 +7,7 @@ plugins {
 
 val asmVersion = "9.5"
 group = "io.github.joemama"
-version = "1.4-ALPHA"
+version = "1.5-ALPHA"
 
 repositories {
     mavenCentral()
@@ -23,7 +23,7 @@ dependencies {
     // For manifest parsing
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
-    implementation("org.benf:cfr:0.152")
+    implementation("org.vineflower:vineflower:1.10.0")
     implementation("gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext:1.1.8")
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.23")
 }
