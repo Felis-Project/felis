@@ -1,12 +1,32 @@
 package io.github.joemama.loader.api.event
 
-import io.github.joemama.loader.api.event.ctx.BreakBlockEventContext
+import io.github.joemama.loader.side.OnlyIn
+import io.github.joemama.loader.side.Side
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.level.Level
 
+/**
+ * Functional interface responsible for handling an event.
+ *
+ * The context of an event, is an object of any kind passed into the event as input and/or output parameters.
+ * It can contain both mutable and immutable data and any set of methods.
+ *
+ * @param C the context of this event
+ * @author 0xJoeMama
+ * @since 2024
+ */
 fun interface EventHandler<C> {
     fun handle(ctx: C)
 }
 
+/**
+ * Contains all registered instances of this event.
+ * Currently handling is pretty simple.
+ *
+ * Can be used to [fire] the event and more importantly [register] event handlers on the event.
+ *
+ * @param T the context of the event that is to be handled
+ */
 open class EventContainer<T> {
     protected val delegates = mutableListOf<EventHandler<T>>()
 
@@ -21,10 +41,19 @@ open class EventContainer<T> {
     }
 }
 
+/**
+ * Base interface for cancellable events.
+ */
 interface CancellableEventContext {
+    /**
+     * Whether or not this event has been cancelled by some handler
+     */
     var isCancelled: Boolean
 }
 
+/**
+ * An subclass of [EventContainer] that is able to handle cancellable events.
+ */
 open class CancellableEventContainer<T> : EventContainer<T>() where T : CancellableEventContext {
     override fun fire(ctx: T) {
         for (del in this.delegates) {
@@ -34,8 +63,18 @@ open class CancellableEventContainer<T> : EventContainer<T>() where T : Cancella
     }
 }
 
-interface PlayerEventContext {
-    val player: Player
+/**
+ * Base interface for events which take in a player instance
+ */
+interface PlayerEventContext<P> where P : Player {
+    val player: P
+}
+
+/**
+ * Base interface for events which take in a world instance
+ */
+interface LevelEventContext<L> where L : Level {
+    val level: L
 }
 
 /**
@@ -49,22 +88,45 @@ interface PlayerEventContext {
  */
 object GameEvents {
     /**
-     * Fired when a player destroys a block.
+     * Events related to [Block]s
      */
-    @JvmStatic
-    val breakBlock = CancellableEventContainer<BreakBlockEventContext>()
-
-    object PlayerTick {
+    object Block {
         /**
-         * Fired at the end of the [Player.tick] method
+         * Fired when a player destroys a block.
+         * Hook point is in [net.minecraft.server.level.ServerPlayerGameMode.destroyBlock],
          */
-        @JvmStatic
-        val end = EventContainer<Player>()
-
-        /**
-         * Fired at the beginning of the [Player.tick] method
-         */
-        @JvmStatic
-        val start = EventContainer<Player>()
+        @JvmField
+        val breakBlock = CancellableEventContainer<BreakBlockEventContext>()
     }
+
+    /**
+     * Events related to [Player]s
+     */
+    object Player {
+        object Tick {
+            /**
+             * Fired at the end of the [Player.tick] method.
+             */
+            @JvmField
+            val end = EventContainer<net.minecraft.world.entity.player.Player>()
+
+            /**
+             * Fired at the beginning of the [Player.tick] method.
+             */
+            @JvmField
+            val start = EventContainer<net.minecraft.world.entity.player.Player>()
+        }
+    }
+
+    object Entity
+    object Item
+    object Level
+    object BlockEntity
+    object Chunk
+
+    @OnlyIn(Side.CLIENT)
+    object Client
+
+    @OnlyIn(Side.SERVER)
+    object Server
 }
