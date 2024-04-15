@@ -1,5 +1,6 @@
 package io.github.joemama.loader.make
 
+import org.gradle.api.Project
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.AnnotationNode
@@ -9,15 +10,19 @@ import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipException
+import javax.inject.Inject
 
-// TODO: Add environment handling
-class JarMerger {
+abstract class JarMerger {
+    @get:Inject
+    abstract val project: Project
     fun merge(client: File, server: File): File {
+        val version = project.extensions.getByType(LoaderMakePlugin.Extension::class.java).version
         val clientJar = JarFile(client)
         val serverJar = JarFile(server)
-        val output = client.parentFile.resolve("1.20.4-mapped-merged.jar")
+        val output = client.parentFile.resolve("$version-mapped-merged.jar")
 
         if (!output.exists()) {
+            println("Merging ${client.path} and ${server.path}")
             output.createNewFile()
             val jarWriter = JarOutputStream(output.outputStream())
 

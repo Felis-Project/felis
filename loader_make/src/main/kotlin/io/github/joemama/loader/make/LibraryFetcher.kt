@@ -2,8 +2,11 @@ package io.github.joemama.loader.make
 
 import org.gradle.api.Project
 import java.io.File
+import javax.inject.Inject
 
-class LibraryFetcher(private val project: Project, private val version: String) {
+abstract class LibraryFetcher {
+    @get:Inject
+    abstract val project: Project
     private val librariesRoot by lazy {
         val libDir = project.gradle.gradleUserHomeDir
             .resolve("caches")
@@ -14,14 +17,14 @@ class LibraryFetcher(private val project: Project, private val version: String) 
         res.set(libDir)
         res
     }
-    val libraries by lazy {
+    val libraries: Set<File> by lazy {
+        val version = project.extensions.getByType(LoaderMakePlugin.Extension::class.java).version
         val root = this.project.objects.directoryProperty()
         root.set(this.librariesRoot)
 
-        // TODO: Use an extension to configure this
-        val version = LoaderMakePlugin.piston.getVersion(this.version)
+        val versionMeta = LoaderMakePlugin.piston.getVersion(version)
 
-        val libs = version.libraries
+        val libs = versionMeta.libraries
         val results = mutableSetOf<File>()
         for (chunk in libs.chunked(10)) {
             chunk.map { it.downloads.artifact }.map { artifact ->
@@ -34,8 +37,6 @@ class LibraryFetcher(private val project: Project, private val version: String) 
     }
 
     fun includeLibs() {
-        this.project.dependencies.apply {
-            add("implementation", project.files(this@LibraryFetcher.libraries))
-        }
+        this.project.dependencies.add("implementation", project.files(this@LibraryFetcher.libraries))
     }
 }

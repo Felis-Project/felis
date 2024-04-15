@@ -3,12 +3,13 @@ package io.github.joemama.loader.make
 import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaLibraryPlugin
-import org.gradle.jvm.tasks.Jar
 import org.jetbrains.gradle.ext.IdeaExtPlugin
 import org.jetbrains.kotlin.gradle.plugin.*
-import org.jetbrains.kotlin.gradle.utils.provider
 import java.net.http.HttpClient
+import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.inject.Inject
@@ -28,14 +29,29 @@ class LoaderMakePlugin : Plugin<Project> {
             private set
     }
 
-    abstract class Extension {
-        @get:Inject
-        abstract val project: Project
-
+    abstract class Extension(@Inject private val project: Project, @Inject private val objects: ObjectFactory) {
         var version: String = "1.20.4"
 
-        val gameJars by provider { GameJars(this.project, this.version).prepare() }
-        val libs by provider { LibraryFetcher(this.project, this.version) }
+        val gameJars: GameJars.JarResult by lazy { objects.newInstance(GameJars::class.java).prepare() }
+
+        val libs: LibraryFetcher by lazy { objects.newInstance(LibraryFetcher::class.java) }
+
+        val userCache: Path by lazy {
+            project.gradle.gradleUserHomeDir
+                .resolve("caches")
+                .resolve("loader-make")
+                .toPath()
+        }
+
+        val modRuntime: Configuration by lazy {
+            project.configurations.create("modRuntime") {
+                val runtimeOnly = project.configurations.getByName("runtimeClasspath")
+                it.extendsFrom(runtimeOnly)
+                it.isCanBeResolved = true
+                it.isCanBeConsumed = false
+                it.isVisible = false
+            }
+        }
     }
 
     override fun apply(project: Project) {
@@ -70,28 +86,14 @@ class LoaderMakePlugin : Plugin<Project> {
             apply(KotlinPluginWrapper::class.java)
         }
 
-        ext.libs.includeLibs()
         val downloadAssetsTask = project.tasks.register("downloadAssets", DownloadAssetsTask::class.java) {
             it.group = "minecraft"
             it.version.set(ext.version)
-            it.assetDir.set(
-                project.gradle.gradleUserHomeDir
-                    .resolve("caches")
-                    .resolve("loader-make")
-                    .resolve("assets")
-                    .apply { mkdirs() }
+            it.assetDir.set(ext.userCache
+                .resolve("assets")
+                .let(Path::toFile)
+                .apply { mkdirs() }
             )
-        }
-
-        project.tasks.withType(Jar::class.java) { jar ->
-            val refmap = project.layout.buildDirectory.file("mixin.refmap.json")
-            jar.doFirst {
-                refmap.map { it.asFile }.get().apply {
-                    createNewFile()
-                    writeText("{}\n")
-                }
-            }
-            jar.from(refmap)
         }
 
         val clientRun = ModRun(
@@ -115,21 +117,18 @@ class LoaderMakePlugin : Plugin<Project> {
             args = listOf("nogui")
         )
 
-        clientRun.gradleTask()
-        serverRun.gradleTask()
-
         project.tasks.register("genSources", GenSourcesTask::class.java) {
             it.group = "minecraft"
             it.inputJar.set(ext.gameJars.merged)
             it.outputJar.set(ext.gameJars.merged.parentFile.resolve(ext.gameJars.merged.nameWithoutExtension + "-sources.jar"))
-        }.get()
+        }
 
-        project.tasks.register("genIdeaRuns") {
-            it.group = "minecraft"
-            it.doLast {
-                clientRun.ideaRun()
-                serverRun.ideaRun()
-            }
+        clientRun.gradleTask()
+        serverRun.gradleTask()
+
+        project.afterEvaluate {
+            ext.libs.includeLibs()
+            ext.gameJars
         }
     }
 }

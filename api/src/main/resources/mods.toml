@@ -13,5 +13,10 @@ name = "minecraft transformation for client entrypoint"
 class = "io.github.joemama.loader.api.client.MinecraftTransformation"
 target = "net.minecraft.client.Minecraft"
 
+[[transforms]]
+name = "Main transformation for server entrypoint"
+class = "io.github.joemama.loader.api.server.MainTransformation"
+target = "net.minecraft.server.Main"
+
 [[mixins]]
 path = "api.mixins.json"

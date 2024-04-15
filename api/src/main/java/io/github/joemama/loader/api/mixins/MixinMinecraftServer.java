@@ -15,6 +15,6 @@ public class MixinMinecraftServer {
     @DontObfuscate
     @Overwrite
     public String getServerModName() {
-        return "joeloader";
+        return "Felis";
     }
 }

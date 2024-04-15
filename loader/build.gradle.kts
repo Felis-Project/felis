@@ -2,12 +2,12 @@ plugins {
     id("loader-make")
     kotlin("plugin.serialization") version "1.9.23"
     `maven-publish`
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 val asmVersion = "9.5"
 group = "io.github.joemama"
-version = "1.0-ALPHA"
+version = "1.1-ALPHA"
 
 dependencies {
     // For transformations
@@ -39,7 +39,4 @@ publishing {
             }
         }
     }
-}
-
-shadow {
 }

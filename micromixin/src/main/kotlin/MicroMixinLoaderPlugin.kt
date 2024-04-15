@@ -33,7 +33,7 @@ object MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
         }
 
     override fun onLoaderInit() {
-        logger.info("Initializing Micromixin")
+        this.logger.info("Initializing Micromixin")
         ModLoader.discoverer.mods.flatMap { it.meta.mixins }.map { it.path }.forEach { path ->
             ModLoader.classLoader.getResourceAsStream(path)?.use { it.readAllBytes() }?.let {
                 transformer.addMixin(ModLoader.classLoader, MixinConfig.fromString(String(it)))
@@ -44,8 +44,9 @@ object MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
     }
 
     class MMClassWriter : ClassWriter(COMPUTE_FRAMES) {
-        override fun getCommonSuperClass(type1: String, type2: String): String =
-            transformer.pool.getCommonSuperClass(transformer.pool.get(type1), transformer.pool.get(type2)).name
+        override fun getCommonSuperClass(type1: String, type2: String): String = transformer.pool.let {
+            it.getCommonSuperClass(it.get(type1), it.get(type2)).name
+        }
     }
 
     object MicroMixinTransformation : Transformation {

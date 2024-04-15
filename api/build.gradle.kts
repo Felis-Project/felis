@@ -1,16 +1,21 @@
 plugins {
     id("loader-make")
     `maven-publish`
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 group = "io.github.joemama"
-version = "1.0-ALPHA"
+version = "1.1-ALPHA"
 
 repositories {
     maven {
         url = project.uri("https://repo.repsy.io/mvn/0xjoemama/public")
         name = "Loader Repo"
     }
+}
+
+loaderMake {
+    version = "1.20.4"
 }
 
 dependencies {

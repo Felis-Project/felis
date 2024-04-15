@@ -4,9 +4,13 @@ plugins {
 }
 
 group = "io.github.joemama"
-version = "1.0-ALPHA"
+version = "1.1-ALPHA"
 
 val mmVersion = "0.4.0-a20240227"
+
+loaderMake {
+    version = "1.20.4"
+}
 
 dependencies {
     implementation(project(":loader"))

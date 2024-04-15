@@ -22,9 +22,7 @@ data class ModRun(
     val args: List<String> = emptyList(),
     val taskDependencies: List<String> = emptyList()
 ) {
-    private val sourceJar by lazy {
-        project.extensions.getByType(LoaderMakePlugin.Extension::class.java).gameJars.merged
-    }
+    private val sourceJar by lazy { project.extensions.getByType(LoaderMakePlugin.Extension::class.java).gameJars.merged }
 
     fun ideaRun() {
         project.extensions.getByType(IdeaModel::class.java).project?.settings?.runConfigurations?.apply {
@@ -70,16 +68,9 @@ data class ModRun(
     }
 
     private fun createClasspaths(): Classpaths {
-        val runtimeOnly = project.configurations.getByName("runtimeClasspath")
-        val mods = project.configurations.create("modRuntime") {
-            it.extendsFrom(runtimeOnly)
-            it.isCanBeResolved = true
-            it.isCanBeConsumed = false
-            it.isVisible = false
-        }
         val loading = mutableListOf<File>()
         val game = mutableListOf<File>()
-        for (mod in mods) {
+        for (mod in project.extensions.getByType(LoaderMakePlugin.Extension::class.java).modRuntime) {
             JarFile(mod).getJarEntry("mods.toml")?.let {
                 game.add(mod)
             } ?: loading.add(mod)

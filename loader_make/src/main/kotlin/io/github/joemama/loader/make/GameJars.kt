@@ -3,28 +3,31 @@ package io.github.joemama.loader.make
 import org.gradle.api.Project
 import java.io.File
 import java.util.jar.JarFile
+import javax.inject.Inject
 
-class GameJars(private val project: Project, private val versionId: String) {
+open class GameJars @Inject constructor(@Inject private val project: Project) {
     data class Jars(val client: File, val server: File)
 
-    private val version = LoaderMakePlugin.piston.getVersion(this.versionId)
+    private val versionId by lazy { project.extensions.getByType(LoaderMakePlugin.Extension::class.java).version }
+    private val version by lazy {
+        LoaderMakePlugin.piston.getVersion(this.versionId)
+    }
 
     private val versionDir by lazy {
-        val dir = this.project.gradle.gradleUserHomeDir
-            .resolve("caches")
-            .resolve("loader-make")
+        val dir = project.extensions.getByType(LoaderMakePlugin.Extension::class.java).userCache
             .resolve("jars")
             .resolve(this.versionId)
+            .toFile()
         dir.mkdirs()
         dir
     }
 
     private val mappingsDir by lazy {
-        val dir = this.project.gradle.gradleUserHomeDir
-            .resolve("caches")
-            .resolve("loader-make")
+        val dir = project.extensions.getByType(LoaderMakePlugin.Extension::class.java)
+            .userCache
             .resolve("mappings")
             .resolve(this.versionId)
+            .toFile()
         dir.mkdirs()
         dir
     }
@@ -34,7 +37,8 @@ class GameJars(private val project: Project, private val versionId: String) {
     fun prepare(): JarResult {
         val jars = fetchJars()
         val mapped = remapJars(jars)
-        val merged = JarMerger().merge(mapped.client, mapped.server)
+        val merger = project.objects.newInstance(JarMerger::class.java)
+        val merged = merger.merge(mapped.client, mapped.server)
 
         this.project.dependencies.add("compileOnly", this.project.files(merged))
         return JarResult(jars, merged)

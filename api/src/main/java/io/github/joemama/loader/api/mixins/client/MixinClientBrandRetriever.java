@@ -14,6 +14,6 @@ public class MixinClientBrandRetriever {
     @DontObfuscate
     @Overwrite
     public static String getClientModName(){
-        return "joeloader";
+        return "Felis";
     }
 }

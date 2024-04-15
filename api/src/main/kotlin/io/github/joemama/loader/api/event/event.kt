@@ -2,8 +2,6 @@ package io.github.joemama.loader.api.event
 
 import io.github.joemama.loader.side.OnlyIn
 import io.github.joemama.loader.side.Side
-import net.minecraft.world.entity.player.Player
-import net.minecraft.world.level.Level
 
 /**
  * Functional interface responsible for handling an event.
@@ -63,19 +61,6 @@ open class CancellableEventContainer<T> : EventContainer<T>() where T : Cancella
     }
 }
 
-/**
- * Base interface for events which take in a player instance
- */
-interface PlayerEventContext<P> where P : Player {
-    val player: P
-}
-
-/**
- * Base interface for events which take in a world instance
- */
-interface LevelEventContext<L> where L : Level {
-    val level: L
-}
 
 /**
  * Contains all events added by the API.
@@ -105,13 +90,13 @@ object GameEvents {
     object Player {
         object Tick {
             /**
-             * Fired at the end of the [Player.tick] method.
+             * Fired at the end of the [net.minecraft.world.entity.player.Player.tick] method.
              */
             @JvmField
             val end = EventContainer<net.minecraft.world.entity.player.Player>()
 
             /**
-             * Fired at the beginning of the [Player.tick] method.
+             * Fired at the beginning of the [net.minecraft.world.entity.player.Player.tick] method.
              */
             @JvmField
             val start = EventContainer<net.minecraft.world.entity.player.Player>()

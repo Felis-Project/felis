@@ -21,9 +21,9 @@ import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.slf4j.Logger
-import java.io.File
-import java.io.PrintStream
-import java.io.StringWriter
+import java.io.*
+import java.util.*
+import javax.tools.*
 
 interface LoaderPluginEntrypoint {
     fun onLoaderInit()
