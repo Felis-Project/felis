@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 public class MixinMinecraftServer {
     /**
      * No one can change our branding
+     *
      * @author 0xJoeMama
      */
     @DontObfuscate

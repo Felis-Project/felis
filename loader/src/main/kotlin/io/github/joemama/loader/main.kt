@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.enum
-import io.github.joemama.loader.meta.ModDiscoverer
+import io.github.joemama.loader.meta.*
 import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.side.SideStrippingTransformation
 import io.github.joemama.loader.transformer.*
@@ -51,9 +51,7 @@ object DebugTransformation : Transformation {
                         Type.getDescriptor(PrintStream::class.java)
                     )
                 )
-                add(
-                    LdcInsnNode("Hello from Debug Transformation")
-                )
+                add(LdcInsnNode("Hello from Debug Transformation"))
                 add(
                     MethodInsnNode(
                         Opcodes.INVOKEVIRTUAL,
@@ -72,6 +70,8 @@ object DebugTransformation : Transformation {
 
 object ModLoader {
     private val logger: Logger = LoggerFactory.getLogger(ModLoader::class.java)
+    lateinit var languageAdapter: DelegatingLanguageAdapter
+        private set
     lateinit var discoverer: ModDiscoverer
         private set
     lateinit var gameJar: JarContentCollection
@@ -81,16 +81,21 @@ object ModLoader {
     lateinit var transformer: Transformer
         private set
     lateinit var side: Side
+        private set
 
     fun initLoader(mods: List<String>, sourceJar: String, side: Side, debugTransform: Boolean) {
         this.logger.info("starting mod loader")
-        this.side = side
-        this.discoverer = ModDiscoverer(mods)
-        this.gameJar = JarContentCollection(Paths.get(sourceJar))
+        this.side = side // the physical side we are running on
+        this.discoverer = ModDiscoverer(mods) // the object used to locate and initialize mods
+        this.gameJar = JarContentCollection(Paths.get(sourceJar)) // the jar the game is located in
+        this.languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
+        this.transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
+        this.classLoader = TransformingClassLoader() // the class loader that uses everything in here to work
 
-        this.classLoader = TransformingClassLoader()
-
-        this.transformer = Transformer()
+        this.languageAdapter.apply {
+            registerAdapter(KotlinLanguageAdapter)
+            registerAdapter(JavaLanguageAdapter)
+        }
 
         this.transformer.apply {
             if (debugTransform) {
@@ -123,11 +128,12 @@ object ModLoader {
         mainMethod.invokeExact(params)
     }
 
+
     inline fun <reified T> callEntrypoint(id: String, crossinline method: (T) -> Unit) {
         this.discoverer.mods
             .flatMap { it.meta.entrypoints }
             .filter { it.id == id }
-            .map { Class.forName(it.clazz, true, this.classLoader).getDeclaredConstructor().newInstance() as T }
+            .map { this.languageAdapter.createInstance<T>(it.clazz).getOrThrow() }
             .forEach { method(it) }
     }
 }

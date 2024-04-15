@@ -23,7 +23,7 @@ fun apiInit() {
     ModLoader.callEntrypoint("common", CommonEntrypoint::onInit)
 }
 
-class BootstrapTransformation : Transformation {
+object BootstrapTransformation : Transformation {
     override fun transform(container: ClassContainer) {
         container.openMethod("bootStrap", "()V") {
             val insn = instructions.first { insn ->

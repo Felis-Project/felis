@@ -15,24 +15,22 @@ import org.stianloader.micromixin.transform.api.MixinLoggingFacade
 import org.stianloader.micromixin.transform.supertypes.ASMClassWrapperProvider
 import org.stianloader.micromixin.transform.supertypes.ClassWrapperPool
 
-class MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
-    companion object {
-        private val logger = LoggerFactory.getLogger("Micromixin")
-        private val classWrappers = ClassWrapperPool(
-            listOf(
-                object : ASMClassWrapperProvider() {
-                    override fun getNode(name: String): ClassNode? = ModLoader.classLoader.getClassData(name)?.node
-                }
-            )
-        )
-        private val transformer: MixinTransformer<TransformingClassLoader> =
-            MixinTransformer<TransformingClassLoader>({ loader, name ->
-                loader.getClassData(name)?.node ?: throw ClassNotFoundException("Invalid mixin class $name")
-            }, this.classWrappers).also {
-                it.logger = MMLogger(this.logger)
-                it.setMergeClassFileVersions(false)
+object MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
+    private val logger = LoggerFactory.getLogger("Micromixin")
+    private val classWrappers = ClassWrapperPool(
+        listOf(
+            object : ASMClassWrapperProvider() {
+                override fun getNode(name: String): ClassNode? = ModLoader.classLoader.getClassData(name)?.node
             }
-    }
+        )
+    )
+    private val transformer: MixinTransformer<TransformingClassLoader> =
+        MixinTransformer<TransformingClassLoader>({ loader, name ->
+            loader.getClassData(name)?.node ?: throw ClassNotFoundException("Invalid mixin class $name")
+        }, this.classWrappers).also {
+            it.logger = MMLogger(this.logger)
+            it.setMergeClassFileVersions(false)
+        }
 
     override fun onLoaderInit() {
         logger.info("Initializing Micromixin")

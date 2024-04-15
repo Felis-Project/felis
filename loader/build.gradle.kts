@@ -17,6 +17,7 @@ dependencies {
     implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
     // For command line argument parsing
     implementation("com.github.ajalt.clikt:clikt:4.3.0")
+    implementation(kotlin("reflect"))
 }
 
 publishing {

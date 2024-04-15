@@ -64,11 +64,19 @@ class ModDiscoverer(modPaths: List<String>) {
     fun registerMod(mod: Mod) = this.internalMods.add(mod)
 }
 
+// TODO: change "class" name
 @Serializable
-data class Entrypoint(val id: String, @SerialName("class") val clazz: String)
+data class Entrypoint(
+    val id: String,
+    @Deprecated(message = "will soon change name") @SerialName("class") val clazz: String
+)
 
 @Serializable
-data class Transform(val name: String, val target: String, @SerialName("class") val clazz: String)
+data class Transform(
+    val name: String,
+    val target: String,
+    @Deprecated(message = "will soon change name") @SerialName("class") val clazz: String
+)
 
 @Serializable
 data class Mixin(val path: String)

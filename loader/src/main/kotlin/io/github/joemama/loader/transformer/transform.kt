@@ -114,9 +114,7 @@ class Transformer : Transformation {
                 target,
                 lazy {
                     Transformation.Named(
-                        Class.forName(clazz, true, ModLoader.classLoader)
-                            .getDeclaredConstructor()
-                            .newInstance() as Transformation,
+                        ModLoader.languageAdapter.createInstance<Transformation>(clazz).getOrThrow(),
                         name
                     )
                 }

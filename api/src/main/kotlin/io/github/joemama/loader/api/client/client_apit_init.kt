@@ -26,7 +26,7 @@ fun clientApiInit() {
     ModLoader.callEntrypoint("client", ClientEntrypoint::onClientInit)
 }
 
-class MinecraftTransformation : Transformation {
+object MinecraftTransformation : Transformation {
     override fun transform(container: ClassContainer) {
         container.openMethod(
             "<init>",
