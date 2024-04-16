@@ -2,6 +2,26 @@ package io.github.joemama.loader.api.event
 
 import io.github.joemama.loader.side.OnlyIn
 import io.github.joemama.loader.side.Side
+import net.minecraft.resources.ResourceLocation
+
+/**
+ * Public API for Event Ordering.
+ * Used to specify relative order at which event handlers are executed.
+ *
+ * @author 0xJoeMama
+ */
+sealed interface Ordering {
+    /**
+     * Execute the handler marked with [Before] **before** the one refered to by [Before.stage]
+     */
+    data class Before(val stage: ResourceLocation) : Ordering
+
+    /**
+     * Execute the handler marked with [After] **after** the one refered to by [Before.stage]
+     */
+    data class After(val stage: ResourceLocation) : Ordering
+}
+
 
 /**
  * Functional interface responsible for handling an event.
@@ -17,6 +37,12 @@ fun interface EventHandler<C> {
     fun handle(ctx: C)
 }
 
+data class EventInstance<C>(
+    val handler: EventHandler<C>,
+    val ordering: List<Ordering>,
+    val path: ResourceLocation?
+) : EventHandler<C> by handler
+
 /**
  * Contains all registered instances of this event.
  * Currently handling is pretty simple.
@@ -26,16 +52,92 @@ fun interface EventHandler<C> {
  * @param T the context of the event that is to be handled
  */
 open class EventContainer<T> {
-    protected val delegates = mutableListOf<EventHandler<T>>()
+    protected val delegates = mutableListOf<EventInstance<T>>()
+    protected var cached = false
 
-    open fun register(handler: EventHandler<T>) {
-        this.delegates.add(handler)
+    open fun register(
+        path: ResourceLocation? = null,
+        vararg ordering: Ordering,
+        handler: EventHandler<T>
+    ) {
+        val instance = EventInstance(
+            path = path,
+            handler = handler,
+            ordering = listOf(*ordering)
+        )
+
+        this.delegates.add(instance)
+        if (ordering.isNotEmpty()) {
+            this.cached = false
+        }
     }
 
     open fun fire(ctx: T) {
+        if (!this.cached) {
+            this.sort()
+            this.cached = true
+        }
+
         for (del in this.delegates) {
             del.handle(ctx)
         }
+    }
+
+    class EventSortError(msg: String) : Exception(msg)
+
+    open fun sort() {
+        val delegateMap: Map<ResourceLocation, EventInstance<T>> = this.delegates.fold(hashMapOf()) { acc, instance ->
+            if (instance.path in acc)
+                throw EventSortError("Event with path ${instance.path} has been registered multiple times")
+            if (instance.path != null) {
+                acc[instance.path] = instance
+            }
+            acc
+        }
+
+        val ords: Map<ResourceLocation, MutableList<ResourceLocation>> = delegateMap.flatMap { (path, inst) ->
+            inst.ordering.map {
+                when (it) {
+                    is Ordering.Before -> Pair(path, it.stage)
+                    is Ordering.After -> Pair(it.stage, path)
+                }
+            }
+        }.fold(hashMapOf()) { acc, (from, to) ->
+            acc.getOrPut(from, ::mutableListOf).add(to)
+            acc
+        }
+
+        if (ords.isEmpty()) return
+
+        val keys = delegateMap.keys.toHashSet()
+        val visited = hashSetOf<ResourceLocation>()
+        val res = ArrayDeque<EventInstance<T>>()
+
+        fun visit(n: ResourceLocation) {
+            if (n !in keys) return
+            if (n in visited) throw EventSortError("Cyclic event dependency detected for $n")
+
+            visited += n
+
+            ords[n]?.let {
+                for (child in it) {
+                    visit(child)
+                }
+            }
+
+            visited.remove(n)
+            keys.remove(n)
+            res.addFirst(delegateMap[n]!!) // we got the key from in there so there is no way it's null
+        }
+
+        while (keys.isNotEmpty()) {
+            val selected = keys.first()
+            visit(selected)
+        }
+
+        this.delegates.filterTo(res) { it.path == null }
+        this.delegates.clear()
+        this.delegates.addAll(res)
     }
 }
 
@@ -54,6 +156,10 @@ interface CancellableEventContext {
  */
 open class CancellableEventContainer<T> : EventContainer<T>() where T : CancellableEventContext {
     override fun fire(ctx: T) {
+        if (!this.cached) {
+            this.sort()
+        }
+
         for (del in this.delegates) {
             del.handle(ctx)
             if (ctx.isCancelled) return

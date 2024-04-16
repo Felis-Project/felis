@@ -7,13 +7,6 @@ plugins {
 group = "io.github.joemama"
 version = "1.1-ALPHA"
 
-repositories {
-    maven {
-        url = project.uri("https://repo.repsy.io/mvn/0xjoemama/public")
-        name = "Loader Repo"
-    }
-}
-
 loaderMake {
     version = "1.20.4"
 }
