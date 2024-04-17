@@ -112,7 +112,7 @@ class Transformer : Transformation {
     private val internal = mutableListOf<Transformation>()
 
     init {
-        for ((name, target, path) in ModLoader.discoverer.mods.flatMap { it.meta.transforms }) {
+        for ((name, target, path) in ModLoader.discoverer.flatMap { it.meta.transforms }) {
             this.external.put(
                 target,
                 lazy {
@@ -169,7 +169,7 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
         NestedContentCollection(
             mutableListOf<ContentCollection>().also {
                 it.add(ModLoader.gameJar) // gameJar has to always go first because of some minecraft weirdness
-                it.addAll(ModLoader.discoverer.mods)
+                it.addAll(ModLoader.discoverer)
                 it.addAll(ModLoader.discoverer.libs)
             }
         )
@@ -188,7 +188,6 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     public override fun findClass(name: String): Class<*>? {
         synchronized(this.getClassLoadingLock(name)) {
             val classData = this.classLoadPerfCounter.timed { this.getClassData(name) }
-            // TODO: optimize the parsing of every loaded class
             if (classData != null) {
                 val bytes = this.transformationPerfCounter.timed {
                     ModLoader.transformer.transform(classData)

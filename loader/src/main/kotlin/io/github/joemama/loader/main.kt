@@ -8,6 +8,7 @@ import io.github.joemama.loader.meta.*
 import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.side.SideStrippingTransformation
 import io.github.joemama.loader.transformer.*
+import net.peanuuutz.tomlkt.Toml
 import org.slf4j.LoggerFactory
 
 import java.nio.file.Paths
@@ -25,6 +26,9 @@ interface LoaderPluginEntrypoint {
 }
 
 object ModLoader {
+    val toml = Toml {
+        ignoreUnknownKeys = true
+    }
     private val logger: Logger = LoggerFactory.getLogger(ModLoader::class.java)
     lateinit var languageAdapter: DelegatingLanguageAdapter
         private set
@@ -43,6 +47,18 @@ object ModLoader {
         this.logger.info("starting mod loader")
         this.side = side // the physical side we are running on
         this.discoverer = ModDiscoverer(mods) // the object used to locate and initialize mods
+
+        // register ourselves as a built-in mod
+        this.discoverer.registerMod(
+            Mod.from(
+                EmptyContentCollection,
+                ModLoader::class.java.classLoader
+                    .getResourceAsStream("mods.toml")
+                    ?.use { it.readAllBytes().decodeToString() }
+                    ?: throw FileNotFoundException("Loader mods.toml was not found")
+            ).getOrThrow()
+        )
+
         this.gameJar = JarContentCollection(Paths.get(sourceJar)) // the jar the game is located in
         this.languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
         this.transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
@@ -69,7 +85,7 @@ object ModLoader {
         this.logger.debug("game args: ${params.contentToString()}")
         val sw = StringWriter()
         sw.append("mods currently running: ")
-        this.discoverer.mods.forEach {
+        this.discoverer.forEach {
             sw.appendLine()
             sw.append("- ${it.meta.modid}: ${it.meta.version}")
         }
@@ -87,7 +103,7 @@ object ModLoader {
 
 
     inline fun <reified T> callEntrypoint(id: String, crossinline method: (T) -> Unit) {
-        this.discoverer.mods
+        this.discoverer
             .asSequence()
             .flatMap { it.meta.entrypoints }
             .filter { it.id == id }

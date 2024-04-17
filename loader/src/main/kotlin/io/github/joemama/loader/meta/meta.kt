@@ -1,12 +1,10 @@
 package io.github.joemama.loader.meta
 
+import io.github.joemama.loader.ModLoader
 import io.github.joemama.loader.PerfCounter
 import io.github.joemama.loader.transformer.ContentCollection
 import io.github.joemama.loader.transformer.JarContentCollection
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.decodeFromString
-import net.peanuuutz.tomlkt.Toml
+import kotlinx.serialization.*
 import net.peanuuutz.tomlkt.TomlTable
 import org.apache.commons.io.file.AccumulatorPathVisitor
 import org.slf4j.LoggerFactory
@@ -16,23 +14,32 @@ import kotlin.io.path.name
 
 internal val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
 
+class ModMetaException(msg: String) : Exception(msg)
+object NotAMod : Throwable() {
+    private fun readResolve(): Any = NotAMod
+}
+
 data class Mod(val contentCollection: ContentCollection, val meta: ModMeta) : ContentCollection by contentCollection {
     companion object {
-        fun parse(contentCollection: ContentCollection): Mod {
+        fun from(contentCollection: ContentCollection): Result<Mod> {
             val metaToml = contentCollection.withStream("mods.toml") {
                 String(it.readAllBytes())
-            }!! // all mods must provide a mods.toml file
-            val meta = Toml.decodeFromString<ModMeta>(metaToml)
-            return Mod(contentCollection, meta)
+            } ?: return Result.failure(NotAMod) // all mods must provide a mods.toml file
+            return from(contentCollection, metaToml)
+        }
+
+        fun from(contentCollection: ContentCollection, metaToml: String): Result<Mod> = runCatching {
+            val toml = ModLoader.toml.parseToTomlTable(metaToml)
+            val meta = ModLoader.toml.decodeFromTomlElement(ModMeta.serializer(), toml)
+            meta.toml = toml
+            Mod(contentCollection, meta)
         }
     }
 }
 
-class ModDiscoverer(modPaths: List<String>) {
+class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
     private val modPathsSplit = modPaths.map { Paths.get(it) }
-    private val internalMods: MutableList<Mod> = mutableListOf()
-    val mods: Iterable<Mod>
-        get() = this.internalMods
+    private val mods: MutableList<Mod> = mutableListOf()
     val libs = mutableListOf<JarContentCollection>()
 
     init {
@@ -45,14 +52,21 @@ class ModDiscoverer(modPaths: List<String>) {
             for (candidate in acc.fileList) {
                 perfcounter.timed {
                     val contentCollection = JarContentCollection(candidate.toFile())
-                    try {
-                        val mod = Mod.parse(contentCollection)
-                        this.internalMods.add(mod)
-                    } catch (e: SerializationException) {
-                        throw IllegalArgumentException("Mod candidate ${candidate.name} had a malformatted mods.toml file")
-                    } catch (e: Exception) {
-                        this.libs.add(contentCollection)
-                    }
+                    Mod.from(contentCollection)
+                        .onSuccess { this.mods.add(it) }
+                        .onFailure {
+                            when (it) {
+                                is SerializationException -> {
+                                    val us =
+                                        ModMetaException("Mod candidate ${candidate.name} had a malformatted mods.toml file")
+                                    us.initCause(it)
+                                    throw us
+                                }
+
+                                is NotAMod -> this.libs.add(contentCollection)
+                                else -> throw it
+                            }
+                        }
                 }
             }
         }
@@ -60,10 +74,10 @@ class ModDiscoverer(modPaths: List<String>) {
         perfcounter.printSummary()
     }
 
-    fun registerMod(mod: Mod) = this.internalMods.add(mod)
+    fun registerMod(mod: Mod) = this.mods.add(mod)
+    override fun iterator(): Iterator<Mod> = this.mods.iterator()
 }
 
-// TODO: change "class" name
 @Serializable
 data class Entrypoint(
     val id: String,
@@ -78,18 +92,15 @@ data class Transform(
 )
 
 @Serializable
-data class Mixin(val path: String)
-
-// TODO: Find what other info we should hold
-// TODO: Allow for others to get data from the mods.toml file
-@Serializable
 data class ModMeta(
     val name: String,
+    val modid: String,
     val version: String,
     val description: String = "",
     val entrypoints: List<Entrypoint> = listOf(),
-    val modid: String,
     val transforms: List<Transform> = listOf(),
-    val mixins: List<Mixin> = listOf(),
-    val extra: TomlTable = TomlTable.Empty
-)
+) {
+    @Transient
+    var toml: TomlTable = TomlTable.Empty
+        internal set
+}

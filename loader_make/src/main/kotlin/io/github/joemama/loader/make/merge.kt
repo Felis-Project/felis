@@ -64,7 +64,6 @@ abstract class JarMerger {
 
             val serverEntry = serverJar.getJarEntry(entry.name)
             if (serverEntry == null) {
-                // TODO: only in client
                 clientJar.getInputStream(entry).use { input ->
                     val reader = ClassReader(input)
                     val node = ClassNode().also { reader.accept(it, 0) }

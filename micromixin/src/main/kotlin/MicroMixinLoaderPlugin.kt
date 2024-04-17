@@ -2,26 +2,54 @@ package io.github.joemama.loader.micromixin
 
 import io.github.joemama.loader.LoaderPluginEntrypoint
 import io.github.joemama.loader.ModLoader
+import io.github.joemama.loader.meta.ModMeta
 import io.github.joemama.loader.transformer.ClassContainer
 import io.github.joemama.loader.transformer.Transformation
 import io.github.joemama.loader.transformer.TransformingClassLoader
+import net.peanuuutz.tomlkt.asTomlArray
+import net.peanuuutz.tomlkt.asTomlTable
+import net.peanuuutz.tomlkt.getString
+import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.Opcodes
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.stianloader.micromixin.transform.MixinConfig
 import org.stianloader.micromixin.transform.MixinTransformer
 import org.stianloader.micromixin.transform.api.MixinLoggingFacade
-import org.stianloader.micromixin.transform.supertypes.ASMClassWrapperProvider
+import org.stianloader.micromixin.transform.supertypes.ClassWrapper
 import org.stianloader.micromixin.transform.supertypes.ClassWrapperPool
+import org.stianloader.micromixin.transform.supertypes.ClassWrapperProvider
 
 object MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
+    data class Mixin(val path: String)
+
+    val ModMeta.mixins: List<Mixin>
+        get() = this.toml["mixins"]
+            ?.asTomlArray()
+            ?.map { it.asTomlTable().getString("path") }
+            ?.map { Mixin(it) }
+            ?: emptyList()
+
     private val logger = LoggerFactory.getLogger("Micromixin")
     private val classWrappers = ClassWrapperPool(
         listOf(
-            object : ASMClassWrapperProvider() {
-                override fun getNode(name: String): ClassNode? = ModLoader.classLoader.getClassData(name)?.node
-            }
+            object : ClassWrapperProvider {
+                override fun provide(name: String, pool: ClassWrapperPool): ClassWrapper? {
+                    val classBytes = ModLoader.classLoader.getClassData(name)?.bytes ?: return null
+                    // better than parsing a node at runtime
+                    return with(ClassReader(classBytes)) {
+                        this.superName
+                        ClassWrapper(
+                            name,
+                            superName,
+                            interfaces,
+                            access and Opcodes.ACC_INTERFACE != 0,
+                            pool
+                        )
+                    }
+                }
+            },
         )
     )
     private val transformer: MixinTransformer<TransformingClassLoader> =
@@ -34,12 +62,16 @@ object MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
 
     override fun onLoaderInit() {
         this.logger.info("Initializing Micromixin")
-        ModLoader.discoverer.mods.flatMap { it.meta.mixins }.map { it.path }.forEach { path ->
+        var configs = 0
+        ModLoader.discoverer.flatMap { it.meta.mixins }.map(Mixin::path).forEach { path ->
             ModLoader.classLoader.getResourceAsStream(path)?.use { it.readAllBytes() }?.let {
                 transformer.addMixin(ModLoader.classLoader, MixinConfig.fromString(String(it)))
+                configs++
             }
         }
 
+        if (configs > 0)
+            this.logger.info("Micromixin successfully initialized with $configs configuration${if (configs > 1) "s" else ""}")
         ModLoader.transformer.registerTransformation(MicroMixinTransformation)
     }
 

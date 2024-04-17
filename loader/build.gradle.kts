@@ -13,11 +13,19 @@ dependencies {
     // For transformations
     api("org.ow2.asm:asm-commons:$asmVersion")
     api("org.ow2.asm:asm-util:$asmVersion")
+
     // For metadata parsing
-    implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
+    api("net.peanuuutz.tomlkt:tomlkt:0.3.7")
+
     // For command line argument parsing
     implementation("com.github.ajalt.clikt:clikt:4.3.0")
+
+    // For the kotlin language adapter
     implementation(kotlin("reflect"))
+}
+
+tasks.processResources {
+    expand("version" to version)
 }
 
 publishing {
