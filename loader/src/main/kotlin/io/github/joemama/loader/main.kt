@@ -14,12 +14,7 @@ import java.nio.file.Paths
 import java.lang.invoke.MethodType
 import java.lang.invoke.MethodHandles
 
-import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
-import org.objectweb.asm.tree.FieldInsnNode
-import org.objectweb.asm.tree.InsnList
-import org.objectweb.asm.tree.LdcInsnNode
-import org.objectweb.asm.tree.MethodInsnNode
 import org.slf4j.Logger
 import java.io.*
 import java.util.*
@@ -27,45 +22,6 @@ import javax.tools.*
 
 interface LoaderPluginEntrypoint {
     fun onLoaderInit()
-}
-
-object DebugTransformation : Transformation {
-    private val logger = LoggerFactory.getLogger(DebugTransformation::class.java)
-    override fun transform(container: ClassContainer) {
-        if (container.name == "net.minecraft.client.main.Main") {
-            val clazz = container.node
-            this.logger.info("Transforming $clazz with DebugTransformation")
-            val mainMethod = clazz.methods.first {
-                it.name == "main" && it.desc == Type.getMethodDescriptor(
-                    Type.VOID_TYPE,
-                    Type.getType(Array<String>::class.java)
-                )
-            }
-
-            val res = InsnList().apply {
-                add(
-                    FieldInsnNode(
-                        Opcodes.GETSTATIC,
-                        "java/lang/System",
-                        "out",
-                        Type.getDescriptor(PrintStream::class.java)
-                    )
-                )
-                add(LdcInsnNode("Hello from Debug Transformation"))
-                add(
-                    MethodInsnNode(
-                        Opcodes.INVOKEVIRTUAL,
-                        Type.getType(PrintStream::class.java).internalName,
-                        "println",
-                        Type.getMethodDescriptor(
-                            Type.VOID_TYPE, Type.getType(String::class.java)
-                        )
-                    )
-                )
-            }
-            mainMethod.instructions.insert(mainMethod.instructions.get(0), res)
-        }
-    }
 }
 
 object ModLoader {
@@ -99,9 +55,9 @@ object ModLoader {
 
         this.transformer.apply {
             if (debugTransform) {
-                registerInternal(DebugTransformation)
+                registerTransformation(DebugTransformation)
             }
-            registerInternal(SideStrippingTransformation)
+            registerTransformation(SideStrippingTransformation)
         }
 
         this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
@@ -112,9 +68,10 @@ object ModLoader {
         this.logger.debug("target game jars: {}", this.gameJar.path)
         this.logger.debug("game args: ${params.contentToString()}")
         val sw = StringWriter()
-        sw.appendLine("mods currently running: ")
+        sw.append("mods currently running: ")
         this.discoverer.mods.forEach {
-            sw.appendLine("- ${it.meta.modid}: ${it.meta.version}")
+            sw.appendLine()
+            sw.append("- ${it.meta.modid}: ${it.meta.version}")
         }
         this.logger.info(sw.toString())
 
@@ -131,9 +88,10 @@ object ModLoader {
 
     inline fun <reified T> callEntrypoint(id: String, crossinline method: (T) -> Unit) {
         this.discoverer.mods
+            .asSequence()
             .flatMap { it.meta.entrypoints }
             .filter { it.id == id }
-            .map { this.languageAdapter.createInstance<T>(it.clazz).getOrThrow() }
+            .map { this.languageAdapter.createInstance<T>(it.path).getOrThrow() }
             .forEach { method(it) }
     }
 }

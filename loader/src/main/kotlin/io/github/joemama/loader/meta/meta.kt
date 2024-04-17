@@ -3,7 +3,6 @@ package io.github.joemama.loader.meta
 import io.github.joemama.loader.PerfCounter
 import io.github.joemama.loader.transformer.ContentCollection
 import io.github.joemama.loader.transformer.JarContentCollection
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
@@ -68,14 +67,14 @@ class ModDiscoverer(modPaths: List<String>) {
 @Serializable
 data class Entrypoint(
     val id: String,
-    @Deprecated(message = "will soon change name") @SerialName("class") val clazz: String
+    val path: String
 )
 
 @Serializable
 data class Transform(
     val name: String,
     val target: String,
-    @Deprecated(message = "will soon change name") @SerialName("class") val clazz: String
+    val path: String
 )
 
 @Serializable

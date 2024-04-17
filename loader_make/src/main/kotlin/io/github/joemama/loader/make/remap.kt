@@ -190,6 +190,10 @@ class LoaderMakeClassRemapper(visitor: ClassVisitor, remapper: Remapper) : Class
     override fun createMethodRemapper(methodVisitor: MethodVisitor): MethodVisitor {
         return VariableRenamingMethodVisitor(methodVisitor, this.remapper)
     }
+
+    override fun visitSource(source: String?, debug: String?) {
+        super.visitSource(this.remapper.map(this.className).replace("/", ".") + ".java", debug)
+    }
 }
 
 class JarRemapper(private val jarFile: File) {

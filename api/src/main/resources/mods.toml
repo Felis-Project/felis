@@ -4,18 +4,23 @@ description = "An API for the ModLoader project"
 modid = "loader_api"
 
 [[transforms]]
-name = "bootstrap transformation for common entrypoint"
-class = "io.github.joemama.loader.api.BootstrapTransformation"
+name = "BuiltInRegistries transformation for common entrypoint"
+path = "io.github.joemama.loader.api.BuiltInRegistriesTransformation"
+target = "net.minecraft.core.registries.BuiltInRegistries"
+
+[[transforms]]
+name = "Bootstrap access widener"
+path = "io.github.joemama.loader.api.BootstrapTransformation"
 target = "net.minecraft.server.Bootstrap"
 
 [[transforms]]
-name = "minecraft transformation for client entrypoint"
-class = "io.github.joemama.loader.api.client.MinecraftTransformation"
+name = "Minecraft transformation for client entrypoint"
+path = "io.github.joemama.loader.api.client.MinecraftTransformation"
 target = "net.minecraft.client.Minecraft"
 
 [[transforms]]
 name = "Main transformation for server entrypoint"
-class = "io.github.joemama.loader.api.server.MainTransformation"
+path = "io.github.joemama.loader.api.server.MainTransformation"
 target = "net.minecraft.server.Main"
 
 [[mixins]]

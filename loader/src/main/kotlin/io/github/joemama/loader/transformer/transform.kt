@@ -6,10 +6,13 @@ import io.github.joemama.loader.ModLoader
 import io.github.joemama.loader.PerfCounter
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
+import org.objectweb.asm.tree.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InputStream
+import java.io.PrintStream
 import java.net.URL
 import java.util.*
 
@@ -109,12 +112,12 @@ class Transformer : Transformation {
     private val internal = mutableListOf<Transformation>()
 
     init {
-        for ((name, target, clazz) in ModLoader.discoverer.mods.flatMap { it.meta.transforms }) {
+        for ((name, target, path) in ModLoader.discoverer.mods.flatMap { it.meta.transforms }) {
             this.external.put(
                 target,
                 lazy {
                     Transformation.Named(
-                        ModLoader.languageAdapter.createInstance<Transformation>(clazz).getOrThrow(),
+                        ModLoader.languageAdapter.createInstance<Transformation>(path).getOrThrow(),
                         name
                     )
                 }
@@ -122,7 +125,7 @@ class Transformer : Transformation {
         }
     }
 
-    fun registerInternal(t: Transformation) {
+    fun registerTransformation(t: Transformation) {
         this.internal.add(t)
     }
 
@@ -223,6 +226,45 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     companion object {
         init {
             registerAsParallelCapable()
+        }
+    }
+}
+
+object DebugTransformation : Transformation {
+    private val logger = LoggerFactory.getLogger(DebugTransformation::class.java)
+    override fun transform(container: ClassContainer) {
+        if (container.name == "net.minecraft.client.main.Main") {
+            val clazz = container.node
+            this.logger.info("Transforming $clazz with DebugTransformation")
+            val mainMethod = clazz.methods.first {
+                it.name == "main" && it.desc == Type.getMethodDescriptor(
+                    Type.VOID_TYPE,
+                    Type.getType(Array<String>::class.java)
+                )
+            }
+
+            val res = InsnList().apply {
+                add(
+                    FieldInsnNode(
+                        Opcodes.GETSTATIC,
+                        "java/lang/System",
+                        "out",
+                        Type.getDescriptor(PrintStream::class.java)
+                    )
+                )
+                add(LdcInsnNode("Hello from Debug Transformation"))
+                add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEVIRTUAL,
+                        Type.getType(PrintStream::class.java).internalName,
+                        "println",
+                        Type.getMethodDescriptor(
+                            Type.VOID_TYPE, Type.getType(String::class.java)
+                        )
+                    )
+                )
+            }
+            mainMethod.instructions.insert(mainMethod.instructions.get(0), res)
         }
     }
 }

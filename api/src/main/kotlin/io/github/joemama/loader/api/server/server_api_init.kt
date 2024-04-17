@@ -3,48 +3,50 @@
 package io.github.joemama.loader.api.server
 
 import io.github.joemama.loader.ModLoader
+import io.github.joemama.loader.api.LoaderApi
+import io.github.joemama.loader.api.event.LoaderEvents
+import io.github.joemama.loader.api.event.MapEventContainer
+import io.github.joemama.loader.asm.InjectionPoint
 import io.github.joemama.loader.asm.openMethod
 import io.github.joemama.loader.side.OnlyIn
 import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.transformer.ClassContainer
 import io.github.joemama.loader.transformer.Transformation
-import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
-import org.objectweb.asm.tree.MethodInsnNode
+import java.io.File
 
 
-@OnlyIn(Side.CLIENT)
+@OnlyIn(Side.SERVER)
 interface ServerEntrypoint {
+    companion object {
+        const val KEY = "server"
+    }
+
     fun onClientInit()
 }
 
 @Suppress("unused")
-@OnlyIn(Side.CLIENT)
+@OnlyIn(Side.SERVER)
 fun serverApiInit() {
-    ModLoader.callEntrypoint("server", ServerEntrypoint::onClientInit)
+    LoaderApi.logger.info("Calling server entrypoint")
+    ModLoader.callEntrypoint(ServerEntrypoint.KEY, ServerEntrypoint::onClientInit)
+    LoaderEvents.entrypointLoaded.fire(MapEventContainer.JointEventContext(ServerEntrypoint.KEY, Unit))
 }
 
 object MainTransformation : Transformation {
     override fun transform(container: ClassContainer) {
-        container.openMethod(
-            "main",
-            "([Ljava/lang/String;)V"
-        ) {
-            val hasAgreedToEulaCall = instructions.first {
-                it is MethodInsnNode &&
-                        it.opcode == Opcodes.INVOKEVIRTUAL &&
-                        it.name == "hasAgreedToEULA" &&
-                        it.owner == "net/minecraft/server/Eula" &&
-                        it.desc == Type.getMethodDescriptor(Type.BOOLEAN_TYPE)
+        container.openMethod("main", "([Ljava/lang/String;)V") {
+            inject(
+                InjectionPoint.Invoke(
+                    Type.getType(File::class.java),
+                    "<init>",
+                    Type.VOID_TYPE,
+                    Type.getType(String::class.java),
+                    limit = 1
+                )
+            ) {
+                invokeStatic("io/github/joemama/loader/api/server/ServerApiInit", "serverApiInit")
             }
-            val methodCall = MethodInsnNode(
-                Opcodes.INVOKESTATIC,
-                "io/github/joemama/loader/api/server/ServerApiInit",
-                "serverApiInit",
-                "()V"
-            )
-
-            instructions.insertBefore(hasAgreedToEulaCall, methodCall)
         }
     }
 }

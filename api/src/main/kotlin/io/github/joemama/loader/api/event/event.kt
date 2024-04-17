@@ -151,6 +151,25 @@ interface CancellableEventContext {
     var isCancelled: Boolean
 }
 
+open class MapEventContainer<K, T> : EventContainer<MapEventContainer.JointEventContext<K, T>>() {
+    private val events = hashMapOf<K, EventContainer<T>>()
+
+    data class JointEventContext<K, T>(val receiver: K, val ctx: T)
+
+    fun registerForReceiver(
+        rec: K,
+        path: ResourceLocation? = null,
+        vararg ordering: Ordering,
+        handler: EventHandler<T>
+    ) {
+        this.events.getOrPut(rec) { EventContainer() }.register(path = path, ordering = ordering, handler)
+    }
+
+    override fun fire(ctx: JointEventContext<K, T>) {
+        this.events[ctx.receiver]?.fire(ctx.ctx)
+    }
+}
+
 /**
  * An subclass of [EventContainer] that is able to handle cancellable events.
  */
@@ -220,4 +239,13 @@ object GameEvents {
 
     @OnlyIn(Side.SERVER)
     object Server
+}
+
+object LoaderEvents {
+    /**
+     * Fired using the key/id of an entrypoint as a receiver, after that entrypoint has been called.
+     * Attention: Entrypoints are not added automatically, you need to fire this event for your own entrypoints.
+     */
+    @JvmStatic
+    val entrypointLoaded = MapEventContainer<String, Unit>()
 }

@@ -40,7 +40,7 @@ object MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
             }
         }
 
-        ModLoader.transformer.registerInternal(MicroMixinTransformation)
+        ModLoader.transformer.registerTransformation(MicroMixinTransformation)
     }
 
     class MMClassWriter : ClassWriter(COMPUTE_FRAMES) {

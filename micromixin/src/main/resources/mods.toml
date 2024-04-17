@@ -5,4 +5,4 @@ modid = "micromixin"
 
 [[entrypoints]]
 id = "loader_plugin"
-class = "io.github.joemama.loader.micromixin.MicroMixinLoaderPlugin"
+path = "io.github.joemama.loader.micromixin.MicroMixinLoaderPlugin"
