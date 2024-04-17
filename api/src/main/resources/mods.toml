@@ -1,7 +1,7 @@
-name="Testmod"
-version = "1.0-ALPHA"
-description = "An API for the ModLoader project"
-modid = "loader_api"
+name = "Felis API"
+version = "${version}"
+description = "A modern modding API for the Felis project"
+modid = "felis-api"
 
 [[transforms]]
 name = "BuiltInRegistries transformation for common entrypoint"

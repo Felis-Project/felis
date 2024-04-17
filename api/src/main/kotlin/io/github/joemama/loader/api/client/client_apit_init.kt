@@ -43,7 +43,7 @@ object MinecraftTransformation : Transformation {
                     limit = 1
                 )
             ) {
-                invokeStatic(Type.getObjectType("io/github/joemama/loader/api/client/ClientApiInit"), "clientApiInit")
+                invokeStatic("io/github/joemama/loader/api/client/ClientApiInit", "clientApiInit")
             }
         }
     }

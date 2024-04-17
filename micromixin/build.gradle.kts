@@ -19,6 +19,12 @@ dependencies {
     implementation("org.stianloader:micromixin-transformer:$mmVersion")
 }
 
+tasks.processResources {
+    filesMatching("mods.toml") {
+        expand("version" to version)
+    }
+}
+
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {

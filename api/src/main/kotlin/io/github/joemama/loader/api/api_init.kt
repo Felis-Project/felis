@@ -39,7 +39,7 @@ object BuiltInRegistriesTransformation : Transformation {
             inject(InjectionPoint.Invoke(owner, "freeze", limit = 1)) {
                 // running this early in case mods want to print using System.out
                 invokeStatic(Bootstrap::class.java, "wrapStreams")
-                invokeStatic("io/github/joemama/loader/api/ApiInit", "apiInit", Type.VOID_TYPE)
+                invokeStatic("io/github/joemama/loader/api/ApiInit", "apiInit")
             }
         }
     }

@@ -24,7 +24,7 @@ data class Mod(val contentCollection: ContentCollection, val meta: ModMeta) : Co
         fun from(contentCollection: ContentCollection): Result<Mod> {
             val metaToml = contentCollection.withStream("mods.toml") {
                 String(it.readAllBytes())
-            } ?: return Result.failure(NotAMod) // all mods must provide a mods.toml file
+            } ?: return Result.failure(NotAMod) // all mods must provide a mods.toml
             return from(contentCollection, metaToml)
         }
 
@@ -58,7 +58,7 @@ class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
                             when (it) {
                                 is SerializationException -> {
                                     val us =
-                                        ModMetaException("Mod candidate ${candidate.name} had a malformatted mods.toml file")
+                                        ModMetaException("Mod candidate ${candidate.name} had a malformatted loader.toml file")
                                     us.initCause(it)
                                     throw us
                                 }

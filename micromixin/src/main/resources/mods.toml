@@ -1,5 +1,5 @@
 name="MicroMixin"
-version = "1.0-ALPHA"
+version = "${version}"
 description = "An implementation of MicroMixin from StianLoader as a loader plugin"
 modid = "micromixin"
 

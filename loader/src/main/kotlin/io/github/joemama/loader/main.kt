@@ -53,9 +53,9 @@ object ModLoader {
             Mod.from(
                 EmptyContentCollection,
                 ModLoader::class.java.classLoader
-                    .getResourceAsStream("mods.toml")
+                    .getResourceAsStream("loader.toml")
                     ?.use { it.readAllBytes().decodeToString() }
-                    ?: throw FileNotFoundException("Loader mods.toml was not found")
+                    ?: throw FileNotFoundException("Loader loader.toml was not found")
             ).getOrThrow()
         )
 

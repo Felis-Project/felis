@@ -16,6 +16,12 @@ dependencies {
     implementation(project(":micromixin"))
 }
 
+tasks.processResources {
+    filesMatching("mods.toml") {
+        expand("version" to version)
+    }
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {
