@@ -6,15 +6,14 @@ import io.github.joemama.loader.transformer.ContentCollection
 import io.github.joemama.loader.transformer.JarContentCollection
 import kotlinx.serialization.*
 import net.peanuuutz.tomlkt.TomlTable
-import org.apache.commons.io.file.AccumulatorPathVisitor
 import org.slf4j.LoggerFactory
 
 import java.nio.file.*
 import kotlin.io.path.name
+import kotlin.streams.asSequence
 
-internal val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
-
-class ModMetaException(msg: String) : Exception(msg)
+open class ModDiscoveryException(msg: String) : Exception(msg)
+class ModMetaException(msg: String) : ModDiscoveryException(msg)
 object NotAMod : Throwable() {
     private fun readResolve(): Any = NotAMod
 }
@@ -38,41 +37,51 @@ data class Mod(val contentCollection: ContentCollection, val meta: ModMeta) : Co
 }
 
 class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
-    private val modPathsSplit = modPaths.map { Paths.get(it) }
     // TODO: Use Delegates.observable to automatically allow transformer to pick up changes
     private val mods: MutableList<Mod> = mutableListOf()
     val libs = mutableListOf<JarContentCollection>()
+    private val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
 
     init {
-        logger.info("mod discovery running for files $modPaths")
-        val perfcounter = PerfCounter("discovered {} mods in {}s. Average mod load time was {}ms")
+        this.logger.info("mod discovery running for files $modPaths")
+        val perfcounter = PerfCounter()
 
-        for (file in this.modPathsSplit) {
-            val acc = AccumulatorPathVisitor()
-            Files.walkFileTree(file, acc)
-            for (candidate in acc.fileList) {
+        // behold the limits of my functional programming ability
+        val (mods, libs) = modPaths
+            .asSequence()
+            .map { Paths.get(it) }
+            .flatMap { Files.walk(it).asSequence() }
+            .map { it.toFile() }
+            .map { JarContentCollection(it) }
+            .fold(Pair(mutableListOf<Mod>(), mutableListOf<JarContentCollection>())) { acc, contentCollection ->
+                val (mods, libs) = acc
                 perfcounter.timed {
-                    val contentCollection = JarContentCollection(candidate.toFile())
                     Mod.from(contentCollection)
-                        .onSuccess { this.mods.add(it) }
+                        .onSuccess { mods.add(it) }
                         .onFailure {
                             when (it) {
-                                is SerializationException -> {
-                                    val us =
-                                        ModMetaException("Mod candidate ${candidate.name} had a malformatted loader.toml file")
-                                    us.initCause(it)
-                                    throw us
-                                }
+                                is SerializationException -> throw ModMetaException(
+                                    "mod candidate ${contentCollection.path.name} had a malformatted loader.toml file"
+                                ).initCause(it)
 
-                                is NotAMod -> this.libs.add(contentCollection)
-                                else -> throw it
+                                is NotAMod -> libs.add(contentCollection)
+
+                                else -> throw ModDiscoveryException(
+                                    "encountered an issue while attempting to discover candidate ${contentCollection.path.name}"
+                                ).initCause(it)
                             }
                         }
                 }
+                acc
             }
-        }
 
-        perfcounter.printSummary()
+
+        this.mods.addAll(mods)
+        this.libs.addAll(libs)
+
+        perfcounter.printSummary { _, total, average ->
+            this.logger.info("discovered ${mods.size} mods in ${total}s. Average discovery time was ${average}ms")
+        }
     }
 
     fun registerMod(mod: Mod) = this.mods.add(mod)

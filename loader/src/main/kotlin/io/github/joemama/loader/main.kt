@@ -9,6 +9,7 @@ import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.side.SideStrippingTransformation
 import io.github.joemama.loader.transformer.*
 import net.peanuuutz.tomlkt.Toml
+import net.peanuuutz.tomlkt.decodeFromString
 import org.slf4j.LoggerFactory
 
 import java.nio.file.Paths
@@ -52,22 +53,21 @@ object ModLoader {
         this.side = side // the physical side we are running on
         this.discoverer = ModDiscoverer(mods) // the object used to locate and initialize mods
 
-        // register ourselves as a built-in mod
-        this.discoverer.registerMod(
-            Mod.from(
-                EmptyContentCollection,
-                ModLoader.javaClass.classLoader
-                    .getResourceAsStream("loader.toml")
-                    ?.use
-                    { it.readAllBytes().decodeToString() }
-                    ?: throw FileNotFoundException("Loader loader.toml was not found")
-            ).getOrThrow()
-        )
-
         this.gameJar = JarContentCollection(Paths.get(sourceJar)) // the jar the game is located in
         this.languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
         this.transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
         this.classLoader = TransformingClassLoader() // the class loader that uses everything in here to work
+
+        // register ourselves as a built-in mod
+        this.discoverer.registerMod(
+            Mod(
+                JarContentCollection(Paths.get(ModLoader.javaClass.protectionDomain.codeSource.location.toURI())),
+                classLoader.getResourceAsStream("loader.toml")
+                    ?.use { String(it.readAllBytes()) }
+                    ?.let { this.toml.decodeFromString(it) }
+                    ?: throw FileNotFoundException("File loader.toml was not found")
+            )
+        )
 
         this.languageAdapter.apply {
             registerAdapter(KotlinLanguageAdapter)

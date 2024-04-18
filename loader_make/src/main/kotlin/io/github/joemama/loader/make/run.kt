@@ -75,6 +75,11 @@ data class ModRun(
                 game.add(mod)
             } ?: loading.add(mod)
         }
+
+        for (consideredMod in project.configurations.getByName("considerMod")) {
+            game.add(consideredMod)
+        }
+
         val jar = project.tasks.getByName("jar") as Jar
         game.add(jar.archiveFile.get().asFile)
         return Classpaths(loading, game)

@@ -42,7 +42,8 @@ data class JarContentCollection(private val file: File) : ContentCollection {
     override fun getContentUrl(name: String): URL? {
         val url = URI.create(this.urlStart + name).toURL()
         return runCatching {
-            url.openConnection() as JarURLConnection
+            val connection = url.openConnection() as JarURLConnection
+            connection.connect()
             url
         }.getOrNull()
     }

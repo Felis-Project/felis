@@ -49,7 +49,6 @@ class LoaderMakePlugin : Plugin<Project> {
                 it.extendsFrom(runtimeOnly)
                 it.isCanBeResolved = true
                 it.isCanBeConsumed = false
-                it.isVisible = false
             }
         }
     }
@@ -129,6 +128,13 @@ class LoaderMakePlugin : Plugin<Project> {
         project.tasks.getByName("idea").doLast {
             clientRun.ideaRun()
             serverRun.ideaRun()
+        }
+
+        project.configurations.maybeCreate("considerMod").apply {
+            project.configurations.getByName("compileOnly").extendsFrom(this)
+            isTransitive = false
+            isCanBeResolved = true
+            isCanBeConsumed = false
         }
 
         project.afterEvaluate {
