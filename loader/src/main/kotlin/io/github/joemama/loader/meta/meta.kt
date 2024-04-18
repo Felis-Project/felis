@@ -39,6 +39,7 @@ data class Mod(val contentCollection: ContentCollection, val meta: ModMeta) : Co
 
 class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
     private val modPathsSplit = modPaths.map { Paths.get(it) }
+    // TODO: Use Delegates.observable to automatically allow transformer to pick up changes
     private val mods: MutableList<Mod> = mutableListOf()
     val libs = mutableListOf<JarContentCollection>()
 

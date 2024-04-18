@@ -56,7 +56,7 @@ open class EventContainer<T> {
     protected var cached = false
 
     open fun register(
-        path: ResourceLocation? = null,
+        path: ResourceLocation?,
         vararg ordering: Ordering,
         handler: EventHandler<T>
     ) {
@@ -71,6 +71,8 @@ open class EventContainer<T> {
             this.cached = false
         }
     }
+
+    open fun register(handler: EventHandler<T>) = this.register(path = null, handler = handler)
 
     open fun fire(ctx: T) {
         if (!this.cached) {
@@ -206,7 +208,7 @@ object GameEvents {
          * Hook point is in [net.minecraft.server.level.ServerPlayerGameMode.destroyBlock],
          */
         @JvmField
-        val breakBlock = CancellableEventContainer<BreakBlockEventContext>()
+        val broken = CancellableEventContainer<BlockBlockEventContext>()
     }
 
     /**

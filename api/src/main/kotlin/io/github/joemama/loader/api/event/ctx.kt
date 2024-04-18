@@ -26,7 +26,7 @@ interface BlockEventContext : LevelEventContext<Level> {
     val block: Block
 }
 
-data class BreakBlockEventContext(
+data class BlockBlockEventContext(
     override val level: Level,
     override val player: Player,
     override val pos: BlockPos,

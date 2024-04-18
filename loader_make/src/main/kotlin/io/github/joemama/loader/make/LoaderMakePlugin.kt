@@ -126,6 +126,11 @@ class LoaderMakePlugin : Plugin<Project> {
         clientRun.gradleTask()
         serverRun.gradleTask()
 
+        project.tasks.getByName("idea").doLast {
+            clientRun.ideaRun()
+            serverRun.ideaRun()
+        }
+
         project.afterEvaluate {
             ext.libs.includeLibs()
             ext.gameJars

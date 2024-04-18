@@ -19,11 +19,11 @@ import org.stianloader.micromixin.transform.MixinTransformer
 import org.stianloader.micromixin.transform.api.MixinLoggingFacade
 import org.stianloader.micromixin.transform.supertypes.ClassWrapper
 import org.stianloader.micromixin.transform.supertypes.ClassWrapperPool
-import org.stianloader.micromixin.transform.supertypes.ClassWrapperProvider
 
 object MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
     data class Mixin(val path: String)
 
+    @Suppress("MemberVisibilityCanBePrivate")
     val ModMeta.mixins: List<Mixin>
         get() = this.toml["mixins"]
             ?.asTomlArray()
@@ -31,30 +31,27 @@ object MicroMixinLoaderPlugin : LoaderPluginEntrypoint {
             ?.map { Mixin(it) }
             ?: emptyList()
 
-    private val logger = LoggerFactory.getLogger("Micromixin")
-    private val classWrappers = ClassWrapperPool(
-        listOf(
-            object : ClassWrapperProvider {
-                override fun provide(name: String, pool: ClassWrapperPool): ClassWrapper? {
-                    val classBytes = ModLoader.classLoader.getClassData(name)?.bytes ?: return null
-                    // better than parsing a node at runtime
-                    return with(ClassReader(classBytes)) {
-                        this.superName
-                        ClassWrapper(
-                            name,
-                            superName,
-                            interfaces,
-                            access and Opcodes.ACC_INTERFACE != 0,
-                            pool
-                        )
-                    }
+    private val logger = LoggerFactory.getLogger("MicroMixin")
+    private val classWrappers = ClassWrapperPool().also {
+        it.addProvider { name, pool ->
+            // better than parsing a node at runtime using ASMClassWrapperProvider
+            ModLoader.classLoader.getClassData(name)
+                ?.bytes
+                ?.let(::ClassReader)
+                ?.run {
+                    ClassWrapper(
+                        name,
+                        superName,
+                        interfaces,
+                        access and Opcodes.ACC_INTERFACE != 0,
+                        pool
+                    )
                 }
-            },
-        )
-    )
+        }
+    }
     private val transformer: MixinTransformer<TransformingClassLoader> =
         MixinTransformer<TransformingClassLoader>({ loader, name ->
-            loader.getClassData(name)?.node ?: throw ClassNotFoundException("Invalid mixin class $name")
+            loader.getClassData(name)?.node ?: throw ClassNotFoundException("Class $name was not found")
         }, this.classWrappers).also {
             it.logger = MMLogger(this.logger)
             it.setMergeClassFileVersions(false)

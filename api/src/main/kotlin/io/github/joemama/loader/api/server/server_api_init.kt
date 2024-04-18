@@ -15,7 +15,6 @@ import io.github.joemama.loader.transformer.Transformation
 import org.objectweb.asm.Type
 import java.io.File
 
-
 @OnlyIn(Side.SERVER)
 interface ServerEntrypoint {
     companion object {
@@ -38,14 +37,14 @@ object MainTransformation : Transformation {
         container.openMethod("main", "([Ljava/lang/String;)V") {
             inject(
                 InjectionPoint.Invoke(
-                    Type.getType(File::class.java),
+                    typeOf(File::class),
                     "<init>",
                     Type.VOID_TYPE,
-                    Type.getType(String::class.java),
+                    typeOf(String::class),
                     limit = 1
                 )
             ) {
-                invokeStatic("io/github/joemama/loader/api/server/ServerApiInit", "serverApiInit")
+                invokeStatic(locate("io.github.joemama.loader.api.server.ServerApiInit"), "serverApiInit")
             }
         }
     }

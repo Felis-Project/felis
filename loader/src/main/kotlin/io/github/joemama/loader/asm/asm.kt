@@ -4,12 +4,9 @@ import io.github.joemama.loader.transformer.ClassContainer
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.Method
-import org.objectweb.asm.tree.AbstractInsnNode
-import org.objectweb.asm.tree.InsnList
-import org.objectweb.asm.tree.LdcInsnNode
-import org.objectweb.asm.tree.MethodInsnNode
-import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.*
 import org.slf4j.LoggerFactory
+import kotlin.reflect.KClass
 
 open class AsmException(msg: String) : Exception(msg)
 class MethodNotFoundException(name: String, clazz: String) :
@@ -85,7 +82,34 @@ sealed interface InjectionPoint {
     }
 }
 
-class MethodScope(val node: MethodNode, val owner: String) {
+typealias InternalName = String
+
+interface LocateScope {
+    fun locate(owner: String): InternalName = owner.replace(".", "/")
+    fun locate(owner: Class<*>): InternalName = this.locate(Type.getType(owner))
+    fun locate(owner: Type): InternalName = owner.internalName
+}
+
+interface TypeScope {
+    fun typeOf(owner: String): Type = Type.getObjectType(owner.replace(".", "/"))
+    fun typeOf(owner: KClass<*>): Type = Type.getType(owner.java)
+}
+
+const val ACCESSNUKE = (Opcodes.ACC_PUBLIC or Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED).inv()
+
+enum class AccessModifier(val code: Int) {
+    PUBLIC(Opcodes.ACC_PUBLIC),
+    PRIVATE(Opcodes.ACC_PRIVATE),
+    PROTECTED(Opcodes.ACC_PROTECTED),
+    PACKAGE_PRIVATE(0)
+}
+
+class MethodScope(val node: MethodNode, val owner: String) : TypeScope {
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun access(access: AccessModifier) {
+        this.node.access = this.node.access and ACCESSNUKE or access.code
+    }
+
     inline fun inject(at: InjectionPoint, config: InsnScope.() -> Unit) {
         val scope = InsnScope()
         config(scope)
@@ -93,25 +117,52 @@ class MethodScope(val node: MethodNode, val owner: String) {
     }
 }
 
-class InsnScope {
+class InsnScope : LocateScope, TypeScope {
     val insns = InsnList()
 
-    fun invokeStatic(owner: Type, name: String, returnType: Type = Type.VOID_TYPE, vararg params: Type) {
-        this.insns.add(
-            MethodInsnNode(
-                Opcodes.INVOKESTATIC,
-                owner.internalName,
-                name,
-                Type.getMethodDescriptor(returnType, *params)
-            )
-        )
-    }
+    fun invokeStatic(owner: InternalName, name: String, returnType: Type = Type.VOID_TYPE, vararg params: Type) =
+        this.invokeMethod(owner, name, Opcodes.INVOKESTATIC, returnType, *params)
 
-    fun invokeStatic(owner: String, name: String, returnType: Type = Type.VOID_TYPE, vararg params: Type) =
-        this.invokeStatic(Type.getObjectType(owner), name, returnType, *params)
+    fun invokeVirtual(owner: InternalName, name: String, returnType: Type = Type.VOID_TYPE, vararg params: Type) =
+        this.invokeMethod(owner, name, Opcodes.INVOKEVIRTUAL, returnType, *params)
 
-    fun invokeStatic(owner: Class<*>, name: String, returnType: Type = Type.VOID_TYPE, vararg params: Type) =
-        this.invokeStatic(Type.getType(owner), name, returnType, *params)
+    fun invokeSpecial(owner: InternalName, name: String, returnType: Type = Type.VOID_TYPE, vararg params: Type) =
+        this.invokeMethod(owner, name, Opcodes.INVOKESPECIAL, returnType, *params)
+
+    fun invokeInterface(owner: InternalName, name: String, returnType: Type = Type.VOID_TYPE, vararg params: Type) =
+        this.invokeMethod(owner, name, Opcodes.INVOKEINTERFACE, returnType, *params)
+
+    private fun invokeMethod(
+        owner: InternalName,
+        name: String,
+        opcode: Int,
+        returnType: Type = Type.VOID_TYPE,
+        vararg params: Type
+    ) = this.insns.add(MethodInsnNode(opcode, owner, name, Type.getMethodDescriptor(returnType, *params)))
+
+    private fun local(code: Int, local: Int) = this.insns.add(VarInsnNode(code, local))
+
+    fun istore(local: Int) = this.local(local, Opcodes.ISTORE)
+    fun lstore(local: Int) = this.local(local, Opcodes.LSTORE)
+    fun fstore(local: Int) = this.local(local, Opcodes.FSTORE)
+    fun dstore(local: Int) = this.local(local, Opcodes.DSTORE)
+    fun astore(local: Int) = this.local(local, Opcodes.ASTORE)
+
+    fun iload(local: Int) = this.local(local, Opcodes.ILOAD)
+    fun lload(local: Int) = this.local(local, Opcodes.LLOAD)
+    fun fload(local: Int) = this.local(local, Opcodes.FLOAD)
+    fun dload(local: Int) = this.local(local, Opcodes.DLOAD)
+    fun aload(local: Int) = this.local(local, Opcodes.ALOAD)
+
+    private fun field(code: Int, owner: InternalName, name: String, type: Type) =
+        this.insns.add(FieldInsnNode(code, owner, name, type.descriptor))
+
+    fun getStatic(owner: InternalName, name: String, type: Type) = field(Opcodes.GETSTATIC, owner, name, type)
+    fun putStatic(owner: InternalName, name: String, type: Type) = field(Opcodes.PUTSTATIC, owner, name, type)
+    fun getField(owner: InternalName, name: String, type: Type) = field(Opcodes.GETFIELD, owner, name, type)
+    fun putField(owner: InternalName, name: String, type: Type) = field(Opcodes.PUTFIELD, owner, name, type)
+
+    fun add(node: AbstractInsnNode) = this.insns.add(node)
 
     fun ldc(value: Any) = this.insns.add(LdcInsnNode(value))
 }

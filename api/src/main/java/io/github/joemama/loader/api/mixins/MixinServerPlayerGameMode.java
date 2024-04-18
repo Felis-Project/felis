@@ -1,7 +1,7 @@
 package io.github.joemama.loader.api.mixins;
 
 import io.github.joemama.loader.api.event.GameEvents;
-import io.github.joemama.loader.api.event.BreakBlockEventContext;
+import io.github.joemama.loader.api.event.BlockBlockEventContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,8 +26,8 @@ public class MixinServerPlayerGameMode {
     private void onDestroyBlock(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
         BlockState state = this.level.getBlockState(pos);
         Block block = state.getBlock();
-        var ctx = new BreakBlockEventContext(this.level, this.player, pos, state, block);
-        GameEvents.Block.breakBlock.fire(ctx);
+        var ctx = new BlockBlockEventContext(this.level, this.player, pos, state, block);
+        GameEvents.Block.broken.fire(ctx);
         if (ctx.isCancelled()) {
             cir.setReturnValue(false);
         }

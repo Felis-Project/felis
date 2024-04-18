@@ -37,13 +37,13 @@ object MinecraftTransformation : Transformation {
         container.openMethod("<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(GameConfig::class.java))) {
             inject(
                 InjectionPoint.Invoke(
-                    Type.getType(Thread::class.java),
+                    typeOf(Thread::class),
                     "currentThread",
-                    Type.getType(Thread::class.java),
+                    typeOf(Thread::class),
                     limit = 1
                 )
             ) {
-                invokeStatic("io/github/joemama/loader/api/client/ClientApiInit", "clientApiInit")
+                invokeStatic(locate("io.github.joemama.loader.api.client.ClientApiInit"), "clientApiInit")
             }
         }
     }

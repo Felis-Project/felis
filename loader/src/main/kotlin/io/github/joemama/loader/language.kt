@@ -3,25 +3,27 @@ package io.github.joemama.loader
 import kotlin.reflect.full.createInstance
 
 interface LanguageAdapter {
-    fun <T> createInstance(name: String): Result<T>
+    fun <T> createInstance(specifier: String): Result<T>
 }
+
+class EntrypointException(spec: String) : IllegalArgumentException("Could not locate entrypoint specified by $spec")
 
 class DelegatingLanguageAdapter : LanguageAdapter, Iterable<LanguageAdapter> {
     private val children: MutableList<LanguageAdapter> = mutableListOf()
 
     fun registerAdapter(adapter: LanguageAdapter) = this.children.add(adapter)
-    override fun <T> createInstance(name: String): Result<T> = this
+    override fun <T> createInstance(specifier: String): Result<T> = this
         .asSequence()
-        .map { it.createInstance<T>(name) }
+        .map { it.createInstance<T>(specifier) }
         .first { it.isSuccess }
 
     override fun iterator(): Iterator<LanguageAdapter> = this.children.iterator()
 }
 
 object JavaLanguageAdapter : LanguageAdapter {
-    @Suppress("UNCHECKED_CAST") // allow unchecked because yes
-    override fun <T> createInstance(name: String): Result<T> = runCatching {
-        Class.forName(name, true, ModLoader.classLoader).let {
+    @Suppress("UNCHECKED_CAST") // fuck you type safety
+    override fun <T> createInstance(specifier: String): Result<T> = runCatching {
+        Class.forName(specifier, true, ModLoader.classLoader).let {
             it.getDeclaredConstructor().newInstance() as T
         }
     }
@@ -29,10 +31,15 @@ object JavaLanguageAdapter : LanguageAdapter {
 
 object KotlinLanguageAdapter : LanguageAdapter {
     @Suppress("UNCHECKED_CAST")
-    override fun <T> createInstance(name: String): Result<T> = runCatching {
-        val kClass = Class.forName(name, true, ModLoader.classLoader).kotlin
-        kClass.objectInstance as? T
-            ?: kClass.createInstance() as? T
-            ?: throw ClassNotFoundException("Could not locate class $name")
+    override fun <T> createInstance(specifier: String): Result<T> = runCatching {
+        val splitName = specifier.split("::")
+        if (splitName.size == 1) {
+            val kClass = Class.forName(specifier, true, ModLoader.classLoader).kotlin
+            kClass.objectInstance as? T
+                ?: kClass.createInstance() as? T
+                ?: throw EntrypointException(specifier)
+        } else {
+            TODO("Method/property references are not implemented yet")
+        }
     }
 }

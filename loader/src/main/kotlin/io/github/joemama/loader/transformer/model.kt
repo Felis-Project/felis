@@ -10,6 +10,7 @@ import java.util.jar.JarFile
 
 /**
  * Basically the implementation of what I like to call a "Jar Tree".
+ *
  * @author 0xJoeMama
  */
 interface ContentCollection {

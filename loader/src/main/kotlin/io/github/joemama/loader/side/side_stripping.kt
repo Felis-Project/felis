@@ -80,7 +80,7 @@ class StripLocator : ClassVisitor(Opcodes.ASM9) {
 
 object SideStrippingTransformation : Transformation {
     override fun transform(container: ClassContainer) {
-        // since all classes are passed into this transformation, we better not reparse them
+        // since all classes are passed into this transformation, we better not parse/unparse them
         if (container.isBytesRef) {
             val locator = StripLocator()
             val reader = ClassReader(container.bytes)

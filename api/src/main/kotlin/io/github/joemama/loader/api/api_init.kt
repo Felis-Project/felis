@@ -5,12 +5,12 @@ package io.github.joemama.loader.api
 import io.github.joemama.loader.ModLoader
 import io.github.joemama.loader.api.event.LoaderEvents
 import io.github.joemama.loader.api.event.MapEventContainer
+import io.github.joemama.loader.asm.AccessModifier
 import io.github.joemama.loader.asm.InjectionPoint
 import io.github.joemama.loader.asm.openMethod
 import io.github.joemama.loader.transformer.ClassContainer
 import io.github.joemama.loader.transformer.Transformation
 import net.minecraft.server.Bootstrap
-import org.objectweb.asm.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -38,8 +38,8 @@ object BuiltInRegistriesTransformation : Transformation {
         container.openMethod("bootStrap", "()V") {
             inject(InjectionPoint.Invoke(owner, "freeze", limit = 1)) {
                 // running this early in case mods want to print using System.out
-                invokeStatic(Bootstrap::class.java, "wrapStreams")
-                invokeStatic("io/github/joemama/loader/api/ApiInit", "apiInit")
+                invokeStatic(locate(Bootstrap::class.java), "wrapStreams")
+                invokeStatic(locate("io.github.joemama.loader.api.ApiInit"), "apiInit")
             }
         }
     }
@@ -47,8 +47,6 @@ object BuiltInRegistriesTransformation : Transformation {
 
 object BootstrapTransformation : Transformation {
     override fun transform(container: ClassContainer) {
-        container.openMethod("wrapStreams", "()V") {
-             node.access = node.access and Opcodes.ACC_PRIVATE.inv() or Opcodes.ACC_PUBLIC
-        }
+        container.openMethod("wrapStreams", "()V") { access(AccessModifier.PUBLIC) }
     }
 }

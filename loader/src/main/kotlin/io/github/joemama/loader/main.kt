@@ -25,6 +25,10 @@ interface LoaderPluginEntrypoint {
     fun onLoaderInit()
 }
 
+// TODO/Missing Features for initial release
+// 1. Useful mod metadata entries
+// 2. Access wideners
+// 3. JarInJar
 object ModLoader {
     val toml = Toml {
         ignoreUnknownKeys = true
@@ -52,9 +56,10 @@ object ModLoader {
         this.discoverer.registerMod(
             Mod.from(
                 EmptyContentCollection,
-                ModLoader::class.java.classLoader
+                ModLoader.javaClass.classLoader
                     .getResourceAsStream("loader.toml")
-                    ?.use { it.readAllBytes().decodeToString() }
+                    ?.use
+                    { it.readAllBytes().decodeToString() }
                     ?: throw FileNotFoundException("Loader loader.toml was not found")
             ).getOrThrow()
         )
@@ -77,6 +82,7 @@ object ModLoader {
         }
 
         this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
+        // TODO: Lock languageAdapter transformer and discovered registration methods after the entrypoint has been called
     }
 
     fun start(owner: String, method: String, desc: String, params: Array<String>) {
@@ -135,7 +141,7 @@ internal class ModLoaderCommand : CliktCommand() {
 
     override fun run() {
         if (this.printClassPath) {
-            val cp = System.getProperty("java.class.path").split(":")
+            val cp = System.getProperty("java.class.path").split(File.pathSeparator)
             for (s in cp) {
                 println(s)
             }
@@ -161,5 +167,5 @@ internal class ModLoaderCommand : CliktCommand() {
 
 fun main(args: Array<String>) {
     println("Modloader running using arguments: ${args.contentToString()}")
-    ModLoaderCommand().main(args)
+    ModLoaderCommand().main(args.toList())
 }
