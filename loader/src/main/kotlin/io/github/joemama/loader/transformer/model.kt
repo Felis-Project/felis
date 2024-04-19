@@ -1,12 +1,10 @@
 package io.github.joemama.loader.transformer
 
-import java.io.File
 import java.io.InputStream
-import java.net.JarURLConnection
-import java.net.URI
 import java.net.URL
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
-import java.util.jar.JarFile
 
 /**
  * Basically the implementation of what I like to call a "Jar Tree".
@@ -31,26 +29,14 @@ class NestedContentCollection(private val children: Iterable<ContentCollection>)
         this.children.flatMap { it.getContentUrls(name) }
 }
 
-data class JarContentCollection(private val file: File) : ContentCollection {
-    private val jarFile = JarFile(this.file)
-    private val url by lazy { this.file.toURI() }
-    val path: Path = this.file.toPath()
-    private val urlStart by lazy { URI.create("jar:${this.url}!/").toString() }
+data class JarContentCollection(val path: Path) : ContentCollection {
+    private val fs = FileSystems.newFileSystem(this.path)
 
-    constructor(path: Path) : this(path.toFile())
+    override fun getContentUrl(name: String): URL? =
+        fs.getPath(name).let { if (Files.exists(it)) it.toUri().toURL() else null }
 
-    override fun getContentUrl(name: String): URL? {
-        val url = URI.create(this.urlStart + name).toURL()
-        return runCatching {
-            val connection = url.openConnection() as JarURLConnection
-            connection.connect()
-            url
-        }.getOrNull()
-    }
-
-    override fun openStream(name: String): InputStream? = this.jarFile.getJarEntry(name)?.let {
-        this.jarFile.getInputStream(it)
-    }
+    override fun openStream(name: String): InputStream? =
+        fs.getPath(name).let { if (Files.exists(it)) Files.newInputStream(it) else null }
 
     /**
      * We assume that a jar cannot contain multiple entries so we can safely do this

@@ -27,7 +27,7 @@ data class Mod(val contentCollection: ContentCollection, val meta: ModMeta) : Co
             return from(contentCollection, metaToml)
         }
 
-        fun from(contentCollection: ContentCollection, metaToml: String): Result<Mod> = runCatching {
+        private fun from(contentCollection: ContentCollection, metaToml: String): Result<Mod> = runCatching {
             val toml = ModLoader.toml.parseToTomlTable(metaToml)
             val meta = ModLoader.toml.decodeFromTomlElement(ModMeta.serializer(), toml)
             meta.toml = toml
@@ -51,7 +51,6 @@ class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
             .asSequence()
             .map { Paths.get(it) }
             .flatMap { Files.walk(it).asSequence() }
-            .map { it.toFile() }
             .map { JarContentCollection(it) }
             .fold(Pair(mutableListOf<Mod>(), mutableListOf<JarContentCollection>())) { acc, contentCollection ->
                 val (mods, libs) = acc

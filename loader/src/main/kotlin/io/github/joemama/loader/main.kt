@@ -8,8 +8,8 @@ import io.github.joemama.loader.meta.*
 import io.github.joemama.loader.side.Side
 import io.github.joemama.loader.side.SideStrippingTransformation
 import io.github.joemama.loader.transformer.*
+import kotlinx.serialization.decodeFromString
 import net.peanuuutz.tomlkt.Toml
-import net.peanuuutz.tomlkt.decodeFromString
 import org.slf4j.LoggerFactory
 
 import java.nio.file.Paths
@@ -64,7 +64,7 @@ object ModLoader {
                 JarContentCollection(Paths.get(ModLoader.javaClass.protectionDomain.codeSource.location.toURI())),
                 classLoader.getResourceAsStream("loader.toml")
                     ?.use { String(it.readAllBytes()) }
-                    ?.let { this.toml.decodeFromString(it) }
+                    ?.let { this.toml.decodeFromString<ModMeta>(it) }
                     ?: throw FileNotFoundException("File loader.toml was not found")
             )
         )

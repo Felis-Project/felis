@@ -111,7 +111,8 @@ data class ModRun(
             }
 
             it.jvmArgs(
-                "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"
+                "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}",
+                "-Dloader.log.level=debug"
             )
             it.args(
                 "--mods", cps.gamePaths,
