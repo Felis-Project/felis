@@ -167,10 +167,10 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
 
     private val contentCollection: ContentCollection by lazy {
         NestedContentCollection(
-            mutableListOf<ContentCollection>().also {
-                it.add(ModLoader.gameJar) // gameJar has to always go first because of some minecraft weirdness
-                it.addAll(ModLoader.discoverer)
-                it.addAll(ModLoader.discoverer.libs)
+            buildList {
+                add(ModLoader.gameJar) // needs to be first because minecrafthonk
+                addAll(ModLoader.discoverer)
+                addAll(ModLoader.discoverer.libs)
             }
         )
     }

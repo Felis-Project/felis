@@ -4,8 +4,10 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.Directory
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaLibraryPlugin
+import org.gradle.api.provider.Provider
 import org.jetbrains.gradle.ext.IdeaExtPlugin
 import org.jetbrains.kotlin.gradle.plugin.*
 import java.net.http.HttpClient
@@ -30,8 +32,7 @@ class LoaderMakePlugin : Plugin<Project> {
     }
 
     abstract class Extension(@Inject private val project: Project, @Inject private val objects: ObjectFactory) {
-        var version: String = "1.20.4"
-
+        var version = "1.20.4"
         val gameJars: GameJars.JarResult by lazy { objects.newInstance(GameJars::class.java).prepare() }
 
         val libs: LibraryFetcher by lazy { objects.newInstance(LibraryFetcher::class.java) }
@@ -51,16 +52,19 @@ class LoaderMakePlugin : Plugin<Project> {
                 it.isCanBeConsumed = false
             }
         }
+
+        val transformedJars: Provider<Directory> by lazy {
+            project.layout.buildDirectory.dir("transformed")
+        }
     }
 
     override fun apply(project: Project) {
         piston = project.objects.newInstance(Piston::class.java)
         val ext = project.extensions.create("loaderMake", Extension::class.java)
         project.repositories.apply {
-            mavenCentral()
             maven {
-                it.url = project.uri("https://repo.spongepowered.org/repository/maven-public/")
-                it.name = "Sponge"
+                it.url = project.uri("https://libraries.minecraft.net/")
+                it.name = "Mojang"
             }
             maven {
                 it.url = project.uri("https://repo.repsy.io/mvn/0xjoemama/public")
@@ -70,6 +74,7 @@ class LoaderMakePlugin : Plugin<Project> {
                 it.url = project.uri("https://stianloader.org/maven/")
                 it.name = "Stianloader"
             }
+            mavenCentral()
         }
 
         project.buildscript.apply {
@@ -130,6 +135,12 @@ class LoaderMakePlugin : Plugin<Project> {
             serverRun.ideaRun()
         }
 
+        project.tasks.register("applyTransformations", ApplyTransformationsTask::class.java) {
+            it.dependsOn("jar")
+            it.group = "minecraft"
+            it.auditJar.set(ext.transformedJars.get().file("${ext.version}.transformed.jar"))
+        }
+
         project.configurations.maybeCreate("considerMod").apply {
             project.configurations.getByName("compileOnly").extendsFrom(this)
             isTransitive = false
@@ -137,9 +148,15 @@ class LoaderMakePlugin : Plugin<Project> {
             isCanBeConsumed = false
         }
 
+        ext.libs.libraries
+
         project.afterEvaluate {
-            ext.libs.includeLibs()
             ext.gameJars
+            if (ext.transformedJars.get().asFileTree.isEmpty) {
+                project.dependencies.add("compileOnly", project.files(ext.gameJars.merged))
+            } else {
+                project.dependencies.add("compileOnly", ext.transformedJars.get().asFileTree)
+            }
         }
     }
 }

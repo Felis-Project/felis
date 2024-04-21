@@ -5,16 +5,24 @@ plugins {
     `maven-publish`
 }
 
-val asmVersion = "9.5"
 group = "io.github.joemama"
 version = "1.6-ALPHA"
 
 repositories {
+    maven {
+        name = "Felis Repo"
+        url = uri("https://repsy.io/mvn/0xjoemama/public/")
+    }
     mavenCentral()
     gradlePluginPortal()
 }
 
+val asmVersion = "9.6"
+
 dependencies {
+    // For remapping
+    implementation("io.github.joemama:actually-tiny-remapper:1.0.0-alpha")
+
     // For transformations
     implementation("org.ow2.asm:asm-commons:$asmVersion")
     implementation("org.ow2.asm:asm-util:$asmVersion")

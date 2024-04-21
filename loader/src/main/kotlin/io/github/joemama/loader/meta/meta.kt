@@ -24,14 +24,12 @@ data class Mod(val contentCollection: ContentCollection, val meta: ModMeta) : Co
             val metaToml = contentCollection.withStream("mods.toml") {
                 String(it.readAllBytes())
             } ?: return Result.failure(NotAMod) // all mods must provide a mods.toml
-            return from(contentCollection, metaToml)
-        }
-
-        private fun from(contentCollection: ContentCollection, metaToml: String): Result<Mod> = runCatching {
-            val toml = ModLoader.toml.parseToTomlTable(metaToml)
-            val meta = ModLoader.toml.decodeFromTomlElement(ModMeta.serializer(), toml)
-            meta.toml = toml
-            Mod(contentCollection, meta)
+            return runCatching {
+                val toml = ModLoader.toml.parseToTomlTable(metaToml)
+                val meta = ModLoader.toml.decodeFromTomlElement(ModMeta.serializer(), toml)
+                meta.toml = toml
+                Mod(contentCollection, meta)
+            }
         }
     }
 }
@@ -60,7 +58,7 @@ class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
                         .onFailure {
                             when (it) {
                                 is SerializationException -> throw ModMetaException(
-                                    "mod candidate ${contentCollection.path.name} had a malformatted loader.toml file"
+                                    "mod candidate ${contentCollection.path.name} had a malformatted mods.toml file"
                                 ).initCause(it)
 
                                 is NotAMod -> libs.add(contentCollection)

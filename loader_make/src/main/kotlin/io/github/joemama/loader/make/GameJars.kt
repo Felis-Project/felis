@@ -1,5 +1,6 @@
 package io.github.joemama.loader.make
 
+import io.github.joemama.atr.JarRemapper
 import org.gradle.api.Project
 import java.io.File
 import java.util.jar.JarFile
@@ -40,7 +41,6 @@ open class GameJars @Inject constructor(@Inject private val project: Project) {
         val merger = project.objects.newInstance(JarMerger::class.java)
         val merged = merger.merge(mapped.client, mapped.server)
 
-        this.project.dependencies.add("compileOnly", this.project.files(merged))
         return JarResult(jars, merged)
     }
 
@@ -80,8 +80,8 @@ open class GameJars @Inject constructor(@Inject private val project: Project) {
             version.downloads.serverMappings.url,
             this.mappingsDir.resolve("$versionId-server.txt")
         ).join()
-        val remappedClient = JarRemapper(jars.client).remap(clientMaps)
-        val remappedServer = JarRemapper(jars.server).remap(serverMaps)
+        val remappedClient = JarRemapper(jars.client.toPath()).remap(clientMaps)
+        val remappedServer = JarRemapper(jars.server.toPath()).remap(serverMaps)
         return Jars(remappedClient.toFile(), remappedServer.toFile())
     }
 }

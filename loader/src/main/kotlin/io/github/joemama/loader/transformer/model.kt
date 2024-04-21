@@ -19,14 +19,9 @@ interface ContentCollection {
 }
 
 class NestedContentCollection(private val children: Iterable<ContentCollection>) : ContentCollection {
-    override fun openStream(name: String): InputStream? =
-        this.children.firstNotNullOfOrNull { it.openStream(name) }
-
-    override fun getContentUrl(name: String): URL? =
-        this.children.firstNotNullOfOrNull { it.getContentUrl(name) }
-
-    override fun getContentUrls(name: String): Collection<URL> =
-        this.children.flatMap { it.getContentUrls(name) }
+    override fun getContentUrl(name: String): URL? = this.children.firstNotNullOfOrNull { it.getContentUrl(name) }
+    override fun openStream(name: String): InputStream? = this.children.firstNotNullOfOrNull { it.openStream(name) }
+    override fun getContentUrls(name: String): Collection<URL> = this.children.flatMap { it.getContentUrls(name) }
 }
 
 data class JarContentCollection(val path: Path) : ContentCollection {

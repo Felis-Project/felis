@@ -26,17 +26,9 @@ abstract class LibraryFetcher {
 
         val libs = versionMeta.libraries
         val results = mutableSetOf<File>()
-        for (chunk in libs.chunked(10)) {
-            chunk.map { it.downloads.artifact }.map { artifact ->
-                val file = root.file(artifact.path).get().asFile
-                fetchFile(artifact.url, file)
-            }.map { it.join() }.toCollection(results)
+        for (libId in libs.map(Library::name)) {
+            this.project.dependencies.add("implementation", libId)
         }
-
         results
-    }
-
-    fun includeLibs() {
-        this.project.dependencies.add("implementation", project.files(this@LibraryFetcher.libraries))
     }
 }

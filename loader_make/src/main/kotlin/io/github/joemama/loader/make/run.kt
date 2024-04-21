@@ -1,5 +1,6 @@
 package io.github.joemama.loader.make
 
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
 import org.gradle.jvm.tasks.Jar
@@ -45,7 +46,7 @@ data class ModRun(
                     this@ModRun.taskDependencies.map { GradleTask(it) }.forEach(beforeRun::add)
                 }
 
-                val cps = createClasspaths()
+                val cps = createClasspaths(project)
                 mainClass = "io.github.joemama.loader.MainKt"
                 includeProvidedDependencies = false
                 jvmArgs += listOf(
@@ -67,22 +68,24 @@ data class ModRun(
         val loadingPaths = this.loading.joinToString(File.pathSeparator) { it.path }
     }
 
-    private fun createClasspaths(): Classpaths {
-        val loading = mutableListOf<File>()
-        val game = mutableListOf<File>()
-        for (mod in project.extensions.getByType(LoaderMakePlugin.Extension::class.java).modRuntime) {
-            JarFile(mod).getJarEntry("mods.toml")?.let {
-                game.add(mod)
-            } ?: loading.add(mod)
-        }
+    companion object {
+        fun createClasspaths(project: Project): Classpaths {
+            val loading = mutableListOf<File>()
+            val game = mutableListOf<File>()
+            for (mod in project.extensions.getByType(LoaderMakePlugin.Extension::class.java).modRuntime) {
+                JarFile(mod).getJarEntry("mods.toml")?.let {
+                    game.add(mod)
+                } ?: loading.add(mod)
+            }
 
-        for (consideredMod in project.configurations.getByName("considerMod")) {
-            game.add(consideredMod)
-        }
+            for (consideredMod in project.configurations.getByName("considerMod")) {
+                game.add(consideredMod)
+            }
 
-        val jar = project.tasks.getByName("jar") as Jar
-        game.add(jar.archiveFile.get().asFile)
-        return Classpaths(loading, game)
+            val jar = project.tasks.getByName("jar") as Jar
+            game.add(jar.archiveFile.get().asFile)
+            return Classpaths(loading, game)
+        }
     }
 
     fun gradleTask() {
@@ -100,25 +103,28 @@ data class ModRun(
                 }
             }
 
-            it.dependsOn("build")
+            it.dependsOn("jar")
             this.taskDependencies.forEach(it::dependsOn)
 
             it.group = "minecraft"
-            val cps = this.createClasspaths()
+            val cps = createClasspaths(project)
             it.mainClass.set("io.github.joemama.loader.MainKt")
             it.classpath = project.objects.fileCollection().also {
                 it.from(cps.loading)
             }
 
+            if (Os.isFamily(Os.FAMILY_MAC)) {
+                it.jvmArgs("-XStartOnFirstThread")
+            }
+
             it.jvmArgs(
-                "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}",
-                "-Dloader.log.level=debug"
+                "-Dlog4j.configurationFile=${loggerCfgFile.get().asFile.path}"
             )
             it.args(
                 "--mods", cps.gamePaths,
                 "--source", this.sourceJar.path,
                 "--side", this.side.name,
-                "--args", this.args.joinToString(" ")
+                "--args", this.args.joinToString(" "),
             )
         }
     }

@@ -19,8 +19,13 @@ import java.lang.invoke.MethodHandles
 import org.objectweb.asm.Type
 import org.slf4j.Logger
 import java.io.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 import java.util.*
 import javax.tools.*
+import kotlin.io.path.extension
+import kotlin.io.path.pathString
 
 interface LoaderPluginEntrypoint {
     fun onLoaderInit()
@@ -107,6 +112,29 @@ object ModLoader {
         mainMethod.invokeExact(params)
     }
 
+    fun auditTransformations(outputPath: String) {
+        this.logger.warn("Auditing game jar ${this.gameJar.path}")
+        FileSystems.newFileSystem(Paths.get(outputPath), mapOf("create" to "true")).use { outputJar ->
+            FileSystems.newFileSystem(this.gameJar.path).use { gameJar ->
+                for (clazz in Files.walk(gameJar.getPath("/")).filter { it.extension == "class" }) {
+                    val name = clazz.pathString.substring(1).replace("/", ".").removeSuffix(".class")
+                    val oldBytes = Files.newInputStream(clazz).use { it.readBytes() }
+                    val container = ClassContainer(name, oldBytes)
+                    this.transformer.transform(container)
+
+                    val output = outputJar.getPath("/").resolve(clazz.pathString)
+                    this.logger.trace("Auditing $name")
+
+                    Files.createDirectories(output.parent)
+                    Files.newOutputStream(
+                        output,
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.WRITE
+                    ).use { it.write(container.bytes) }
+                }
+            }
+        }
+    }
 
     inline fun <reified T> callEntrypoint(id: String, crossinline method: (T) -> Unit) {
         this.discoverer
@@ -138,6 +166,9 @@ internal class ModLoaderCommand : CliktCommand() {
         .boolean()
         .default(false)
     private val side: Side by option("--side").enum<Side> { it.name }.required()
+    private val audit by option("--audit")
+        .default("no")
+        .help("Apply all transformations defined by mods to the source jar")
 
     override fun run() {
         if (this.printClassPath) {
@@ -156,6 +187,12 @@ internal class ModLoaderCommand : CliktCommand() {
             side = this.side,
             debugTransform = this.debugTransformation
         )
+
+        if (this.audit != "no") {
+            ModLoader.auditTransformations(this.audit)
+            return
+        }
+
         ModLoader.start(
             owner = mainClass,
             method = "main",
