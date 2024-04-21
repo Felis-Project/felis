@@ -1,2 +1,25 @@
+[versions]
+felis-dam = "1.6-ALPHA"
+asm = "9.6"
+tomlkt = "0.3.7"
+clikt = "4.3.0"
+kotlin-coroutines = "1.8.0"
+kotlin-serialization = "1.9.23"
+dokka = "1.9.20"
+shadow = "8.1.1"
+
+[libraries]
+asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
+asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
+tomlkt = { module = "net.peanuuutz.tomlkt:tomlkt", version.ref = "tomlkt" }
+clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
+
+[bundles]
+asm = ["asm-util", "asm-commons"]
+
 [plugins]
-kotlin = { id = "org.jetbrains.kotlin.jvm", version = "1.9.20" }
+felis-dam = { id = "felis-dam", version.ref = "felis-dam" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin-serialization" }
+dokka = {id = "org.jetbrains.dokka", version.ref = "dokka"}
+shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow"}

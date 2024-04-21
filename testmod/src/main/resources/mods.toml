@@ -1,0 +1,7 @@
+name = "Testmod"
+modid = "testmod"
+version = "${version}"
+
+[[entrypoints]]
+id = "common"
+path = "felis.testmod.Testmod"

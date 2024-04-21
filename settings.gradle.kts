@@ -9,8 +9,5 @@ pluginManagement {
     }
 }
 
-rootProject.name = "ModLoader"
-includeBuild("loader_make")
-include("loader")
-include("api")
-include("micromixin")
+rootProject.name = "felis"
+include("testmod")

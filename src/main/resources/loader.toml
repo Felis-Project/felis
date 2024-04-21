@@ -1,0 +1,6 @@
+name = "Felis Loader"
+modid = "felis"
+version = "${version}"
+description = """
+A modern mod loader for Minecraft
+"""
