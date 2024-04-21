@@ -48,7 +48,7 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             pom {
-                artifactId = "loader"
+                artifactId = "felis"
             }
             from(components["java"])
         }
