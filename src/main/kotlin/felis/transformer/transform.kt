@@ -1,7 +1,5 @@
 package felis.transformer
 
-import com.google.common.collect.Multimap
-import com.google.common.collect.MultimapBuilder
 import felis.ModLoader
 import felis.PerfCounter
 import org.objectweb.asm.ClassReader
@@ -93,7 +91,7 @@ data class ClassContainer internal constructor(val name: String, private var ref
         get() = this.ref.isBytesRef
 }
 
-interface Transformation {
+fun interface Transformation {
     fun transform(container: ClassContainer)
 
     data class Named(
@@ -105,25 +103,22 @@ interface Transformation {
 
 class Transformer : Transformation {
     private val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
-    private val external: Multimap<String, Lazy<Transformation.Named>> = MultimapBuilder.ListMultimapBuilder
-        .hashKeys()
-        .arrayListValues()
-        .build()
-    private val internal = mutableListOf<Transformation>()
 
-    init {
-        for ((name, target, path) in ModLoader.discoverer.flatMap { it.meta.transforms }) {
-            this.external.put(
-                target,
+    // we have to store lazies to allow custom language adapters to work
+    private val external: Map<String, List<Lazy<Transformation.Named>>> = ModLoader.discoverer
+        .flatMap { it.meta.transforms }
+        .groupBy { it.target }
+        .mapValues { (_, transformations) ->
+            transformations.map {
                 lazy {
                     Transformation.Named(
-                        ModLoader.languageAdapter.createInstance<Transformation>(path).getOrThrow(),
-                        name
+                        ModLoader.languageAdapter.createInstance<Transformation>(it.path).getOrThrow(),
+                        it.name
                     )
                 }
-            )
+            }
         }
-    }
+    private val internal = mutableListOf<Transformation>()
 
     fun registerTransformation(t: Transformation) {
         this.internal.add(t)
@@ -132,7 +127,7 @@ class Transformer : Transformation {
     override fun transform(container: ClassContainer) {
         val name = container.name
         if (this.external.containsKey(name)) {
-            for (t in this.external.get(name)) {
+            for (t in this.external.getOrDefault(name, emptyList())) {
                 this.logger.info("transforming $name with ${t.value.transformationName}")
                 t.value.transform(container)
                 if (container.skip) {

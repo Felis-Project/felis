@@ -81,6 +81,7 @@ class StripLocator : ClassVisitor(Opcodes.ASM9) {
 object SideStrippingTransformation : Transformation {
     override fun transform(container: ClassContainer) {
         // since all classes are passed into this transformation, we better not parse/unparse them
+        // if we are bytes, pass through an event-driven stripper
         if (container.isBytesRef) {
             val locator = StripLocator()
             val reader = ClassReader(container.bytes)
@@ -98,7 +99,7 @@ object SideStrippingTransformation : Transformation {
             reader.accept(stripper, 0)
 
             container.newBytes(writer.toByteArray())
-        } else {
+        } else { // otherwise, if we are already parsed, pass through a tree driven system
             container.node.visibleAnnotations?.find { it.desc == Type.getDescriptor(OnlyIn::class.java) }?.let {
                 @Suppress("UNCHECKED_CAST")
                 val value = (it.values[1] as Array<String>)[1]

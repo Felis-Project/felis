@@ -1,13 +1,18 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    alias(libs.plugins.felis.dam)
+    // alias(libs.plugins.felis.dam)
+    alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.dokka)
     alias(libs.plugins.shadow)
     `maven-publish`
     application
     `java-library`
+}
+
+repositories {
+    mavenCentral()
 }
 
 group = "felis"
@@ -27,6 +32,7 @@ dependencies {
     shadowJar(libs.clikt)
     shadowJarApi(libs.kotlin.coroutines)
     shadowJarApi(kotlin("reflect"))
+    shadowJar("org.slf4j:slf4j-api:2.0.13")
 }
 
 tasks.processResources {

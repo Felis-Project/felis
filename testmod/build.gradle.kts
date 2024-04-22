@@ -7,7 +7,6 @@ version = "1.0.0-alpha"
 
 dependencies {
     implementation(project(":"))
-    implementation("io.github.joemama:kittens:1.1-ALPHA")
 }
 
 tasks.processResources {

@@ -87,6 +87,7 @@ typealias InternalName = String
 interface LocateScope {
     fun locate(owner: String): InternalName = owner.replace(".", "/")
     fun locate(owner: Class<*>): InternalName = this.locate(Type.getType(owner))
+    fun locate(owner: KClass<*>): InternalName = this.locate(owner.java)
     fun locate(owner: Type): InternalName = owner.internalName
 }
 

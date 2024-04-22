@@ -7,6 +7,7 @@ kotlin-coroutines = "1.8.0"
 kotlin-serialization = "1.9.23"
 dokka = "1.9.20"
 shadow = "8.1.1"
+kotlin = "1.9.23"
 
 [libraries]
 asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
@@ -23,3 +24,4 @@ felis-dam = { id = "felis-dam", version.ref = "felis-dam" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin-serialization" }
 dokka = {id = "org.jetbrains.dokka", version.ref = "dokka"}
 shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow"}
+kotlin = { id = "org.jetbrains.kotlin.jvm" ,version.ref = "kotlin"}

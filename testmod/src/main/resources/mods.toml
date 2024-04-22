@@ -2,6 +2,11 @@ name = "Testmod"
 modid = "testmod"
 version = "${version}"
 
+[[transforms]]
+name = "test transform"
+target = "net.minecraft.client.main.Main"
+path = "felis.testmod.MainTransformation"
+
 [[entrypoints]]
-id = "common"
-path = "felis.testmod.Testmod"
+id = "loader_plugin"
+path = "felis.testmod.TestLoaderPlugin"
