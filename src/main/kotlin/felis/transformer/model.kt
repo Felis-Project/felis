@@ -1,4 +1,4 @@
-package io.github.joemama.loader.transformer
+package felis.transformer
 
 import java.io.InputStream
 import java.net.URL

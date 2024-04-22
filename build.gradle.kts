@@ -10,8 +10,8 @@ plugins {
     `java-library`
 }
 
-group = "io.github.joemama"
-version = "1.1-ALPHA"
+group = "felis"
+version = "1.2.0-alpha"
 
 val shadowJarApi: Configuration by configurations.creating {
     configurations.getByName("api").extendsFrom(this)
@@ -42,6 +42,24 @@ tasks.withType(ShadowJar::class.java) {
 
 application {
     mainClass = "io.github.joemama.loader.MainKt"
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_17
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+kotlin {
+    target {
+        jvmToolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
 }
 
 publishing {

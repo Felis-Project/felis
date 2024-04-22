@@ -1,13 +1,15 @@
-package io.github.joemama.loader
+package felis
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.enum
-import io.github.joemama.loader.meta.*
-import io.github.joemama.loader.side.Side
-import io.github.joemama.loader.side.SideStrippingTransformation
-import io.github.joemama.loader.transformer.*
+import felis.meta.Mod
+import felis.meta.ModDiscoverer
+import felis.meta.ModMeta
+import felis.side.Side
+import felis.transformer.*
+import felis.side.SideStrippingTransformation
 import kotlinx.serialization.decodeFromString
 import net.peanuuutz.tomlkt.Toml
 import org.slf4j.LoggerFactory
@@ -54,55 +56,55 @@ object ModLoader {
         private set
 
     fun initLoader(mods: List<String>, sourceJar: String, side: Side, debugTransform: Boolean) {
-        this.logger.info("starting mod loader")
-        this.side = side // the physical side we are running on
-        this.discoverer = ModDiscoverer(mods) // the object used to locate and initialize mods
+        logger.info("starting mod loader")
+        ModLoader.side = side // the physical side we are running on
+        discoverer = ModDiscoverer(mods) // the object used to locate and initialize mods
 
-        this.gameJar = JarContentCollection(Paths.get(sourceJar)) // the jar the game is located in
-        this.languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
-        this.transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
-        this.classLoader = TransformingClassLoader() // the class loader that uses everything in here to work
+        gameJar = JarContentCollection(Paths.get(sourceJar)) // the jar the game is located in
+        languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
+        transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
+        classLoader = TransformingClassLoader() // the class loader that uses everything in here to work
 
         // register ourselves as a built-in mod
-        this.discoverer.registerMod(
+        discoverer.registerMod(
             Mod(
                 JarContentCollection(Paths.get(ModLoader.javaClass.protectionDomain.codeSource.location.toURI())),
                 classLoader.getResourceAsStream("loader.toml")
                     ?.use { String(it.readAllBytes()) }
-                    ?.let { this.toml.decodeFromString<ModMeta>(it) }
+                    ?.let { toml.decodeFromString<ModMeta>(it) }
                     ?: throw FileNotFoundException("File loader.toml was not found")
             )
         )
 
-        this.languageAdapter.apply {
+        languageAdapter.apply {
             registerAdapter(KotlinLanguageAdapter)
             registerAdapter(JavaLanguageAdapter)
         }
 
-        this.transformer.apply {
+        transformer.apply {
             if (debugTransform) {
                 registerTransformation(DebugTransformation)
             }
             registerTransformation(SideStrippingTransformation)
         }
 
-        this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
+        callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
         // TODO: Lock languageAdapter transformer and discoverer registration methods after the entrypoint has been called
     }
 
     fun start(owner: String, method: String, desc: String, params: Array<String>) {
-        this.logger.info("starting game")
-        this.logger.debug("target game jars: {}", this.gameJar.path)
-        this.logger.debug("game args: ${params.contentToString()}")
+        logger.info("starting game")
+        logger.debug("target game jars: {}", gameJar.path)
+        logger.debug("game args: ${params.contentToString()}")
         val sw = StringWriter()
         sw.append("mods currently running: ")
-        this.discoverer.forEach {
+        discoverer.forEach {
             sw.appendLine()
             sw.append("- ${it.meta.modid}: ${it.meta.version}")
         }
-        this.logger.info(sw.toString())
+        logger.info(sw.toString())
 
-        val mainClass = this.classLoader.loadClass(owner)
+        val mainClass = classLoader.loadClass(owner)
         val mainMethod = MethodHandles.lookup().findStatic(
             mainClass,
             method,
@@ -113,17 +115,17 @@ object ModLoader {
     }
 
     fun auditTransformations(outputPath: String) {
-        this.logger.warn("Auditing game jar ${this.gameJar.path}")
+        logger.warn("Auditing game jar ${gameJar.path}")
         FileSystems.newFileSystem(Paths.get(outputPath), mapOf("create" to "true")).use { outputJar ->
-            FileSystems.newFileSystem(this.gameJar.path).use { gameJar ->
+            FileSystems.newFileSystem(gameJar.path).use { gameJar ->
                 for (clazz in Files.walk(gameJar.getPath("/")).filter { it.extension == "class" }) {
                     val name = clazz.pathString.substring(1).replace("/", ".").removeSuffix(".class")
                     val oldBytes = Files.newInputStream(clazz).use { it.readBytes() }
                     val container = ClassContainer(name, oldBytes)
-                    this.transformer.transform(container)
+                    transformer.transform(container)
 
                     val output = outputJar.getPath("/").resolve(clazz.pathString)
-                    this.logger.trace("Auditing $name")
+                    logger.trace("Auditing $name")
 
                     Files.createDirectories(output.parent)
                     Files.newOutputStream(
@@ -138,11 +140,11 @@ object ModLoader {
 
     @Suppress("MemberVisibilityCanBePrivate")
     inline fun <reified T> callEntrypoint(id: String, crossinline method: (T) -> Unit) {
-        this.discoverer
+        discoverer
             .asSequence()
             .flatMap { it.meta.entrypoints }
             .filter { it.id == id }
-            .map { this.languageAdapter.createInstance<T>(it.path).getOrThrow() }
+            .map { languageAdapter.createInstance<T>(it.path).getOrThrow() }
             .forEach { method(it) }
     }
 }

@@ -1,8 +1,8 @@
-package io.github.joemama.loader.side
+package felis.side
 
-import io.github.joemama.loader.ModLoader
-import io.github.joemama.loader.transformer.ClassContainer
-import io.github.joemama.loader.transformer.Transformation
+import felis.ModLoader
+import felis.transformer.ClassContainer
+import felis.transformer.Transformation
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.Method
 

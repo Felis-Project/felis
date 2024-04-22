@@ -1,4 +1,4 @@
-package io.github.joemama.loader
+package felis
 
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration
@@ -11,7 +11,7 @@ class PerfCounter(private val message: String = "{} actions in {}s. Average time
         private val logger = LoggerFactory.getLogger(PerfCounter::class.java)
         private val counters: MutableList<PerfCounter> = mutableListOf()
         private val shutdownThread = Thread {
-            this.counters.forEach {
+            counters.forEach {
                 it.printSummary { actions, total, average ->
                     logger.info(it.message, actions, total, average)
                 }
@@ -20,7 +20,7 @@ class PerfCounter(private val message: String = "{} actions in {}s. Average time
 
         init {
             shutdownThread.name = "Waiter"
-            Runtime.getRuntime().addShutdownHook(this.shutdownThread)
+            Runtime.getRuntime().addShutdownHook(shutdownThread)
         }
     }
 

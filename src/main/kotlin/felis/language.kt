@@ -1,4 +1,4 @@
-package io.github.joemama.loader
+package felis
 
 import kotlin.reflect.full.createInstance
 

@@ -1,9 +1,9 @@
-package io.github.joemama.loader.meta
+package felis.meta
 
-import io.github.joemama.loader.ModLoader
-import io.github.joemama.loader.PerfCounter
-import io.github.joemama.loader.transformer.ContentCollection
-import io.github.joemama.loader.transformer.JarContentCollection
+import felis.ModLoader
+import felis.PerfCounter
+import felis.transformer.ContentCollection
+import felis.transformer.JarContentCollection
 import kotlinx.serialization.*
 import net.peanuuutz.tomlkt.TomlTable
 import org.slf4j.LoggerFactory

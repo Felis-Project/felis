@@ -1,4 +1,4 @@
-package io.github.joemama.loader.side
+package felis.side
 
 enum class Side {
     CLIENT,

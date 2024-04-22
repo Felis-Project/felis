@@ -1,9 +1,9 @@
-package io.github.joemama.loader.transformer
+package felis.transformer
 
 import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
-import io.github.joemama.loader.ModLoader
-import io.github.joemama.loader.PerfCounter
+import felis.ModLoader
+import felis.PerfCounter
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -234,7 +234,7 @@ object DebugTransformation : Transformation {
     override fun transform(container: ClassContainer) {
         if (container.name == "net.minecraft.client.main.Main") {
             val clazz = container.node
-            this.logger.info("Transforming $clazz with DebugTransformation")
+            logger.info("Transforming $clazz with DebugTransformation")
             val mainMethod = clazz.methods.first {
                 it.name == "main" && it.desc == Type.getMethodDescriptor(
                     Type.VOID_TYPE,

@@ -1,6 +1,6 @@
-package io.github.joemama.loader.asm
+package felis.asm
 
-import io.github.joemama.loader.transformer.ClassContainer
+import felis.transformer.ClassContainer
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.Method
