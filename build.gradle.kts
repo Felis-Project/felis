@@ -16,7 +16,7 @@ repositories {
 }
 
 group = "felis"
-version = "1.2.0-alpha"
+version = "1.2.1-alpha"
 
 val shadowJarApi: Configuration by configurations.creating {
     configurations.getByName("api").extendsFrom(this)
