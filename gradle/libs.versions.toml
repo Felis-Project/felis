@@ -1,6 +1,6 @@
 [versions]
-felis-dam = "1.7.0-alpha"
-asm = "9.6"
+felis-dam = "1.7.4-alpha"
+asm = "9.7"
 tomlkt = "0.3.7"
 clikt = "4.3.0"
 kotlin-coroutines = "1.8.0"

@@ -1,11 +1,9 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 plugins {
     // alias(libs.plugins.felis.dam)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.dokka)
-    alias(libs.plugins.shadow)
+//    alias(libs.plugins.shadow)
     `maven-publish`
     application
     `java-library`
@@ -16,7 +14,7 @@ repositories {
 }
 
 group = "felis"
-version = "1.2.1-alpha"
+version = "1.2.2-alpha"
 
 val shadowJarApi: Configuration by configurations.creating {
     configurations.getByName("api").extendsFrom(this)
@@ -39,12 +37,12 @@ tasks.processResources {
     expand("version" to version)
 }
 
-tasks.withType(ShadowJar::class.java) {
-    configurations = listOf(shadowJar)
-    minimize()
-    // TODO: Why does this not work?
-    exclude("it.unimi.dsi:fastutil:.")
-}
+//tasks.withType(ShadowJar::class.java) {
+//    configurations = listOf(shadowJar)
+//    minimize()
+//    // TODO: Why does this not work?
+//    exclude("it.unimi.dsi:fastutil:.")
+//}
 
 application {
     mainClass = "io.github.joemama.loader.MainKt"
@@ -53,17 +51,17 @@ application {
 java {
     withSourcesJar()
     withJavadocJar()
-    targetCompatibility = JavaVersion.VERSION_17
-    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_21
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
 kotlin {
     target {
         jvmToolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(21)
         }
     }
 }
