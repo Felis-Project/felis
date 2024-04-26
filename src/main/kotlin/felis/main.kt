@@ -263,68 +263,28 @@ object ModLoader {
  */
 @Internal
 internal class ModLoaderCommand : CliktCommand() {
-    private val mods: List<String> by option("--mods")
+    val mods: List<String> by option("--mods")
         .help("All directories and jar files to look for mods in separated by ':'")
         .split(File.pathSeparator)
         .default(emptyList())
-    private val gameJarPath: String by option("--source")
+    val gameJarPath: String by option("--source")
         .help("Define the source jar to run the game from")
         .required()
-    private val gameArgs: String by option("--args")
-        .help("Arguments passed into the main method of the game")
-        .default("")
-    private val printClassPath: Boolean by option("--print-cp")
+    val printClassPath: Boolean by option("--print-cp")
         .help("Print the jvm classpath")
         .boolean()
         .default(false)
-    private val debugTransformation: Boolean by option("--debug-t")
+    val debugTransformation: Boolean by option("--debug-t")
         .help("Apply a debug transformation at runtime")
         .boolean()
         .default(false)
-    private val side: Side by option("--side").enum<Side> { it.name }.required()
-    private val audit by option("--audit")
+    val side: Side by option("--side").enum<Side> { it.name }.required()
+    val audit by option("--audit")
         .default("no")
         .help("Apply all transformations defined by mods to the source jar")
 
-    override fun run() {
-        // print the classpath
-        if (this.printClassPath) {
-            val cp = System.getProperty("java.class.path").split(File.pathSeparator)
-            for (s in cp) {
-                println(s)
-            }
-        }
-
-        // TODO: Maybe move this into a different thing
-        // locate main class
-        val mainClass = when (this.side) {
-            Side.CLIENT -> "net.minecraft.client.main.Main"
-            Side.SERVER -> "net.minecraft.server.Main"
-        }
-
-        // Initialize the ModLoader instance for this launch
-        ModLoader.initLoader(
-            mods = this.mods,
-            sourceJar = this.gameJarPath,
-            side = this.side,
-            debugTransform = this.debugTransformation
-        )
-
-        // Audit game classes if that is what the user chose
-        if (this.audit != "no") {
-            ModLoader.auditTransformations(this.audit)
-            return
-        }
-
-        // TODO: Maybe move this into a different thing(2)
-        // Otherwise start the game using the main class from above
-        ModLoader.start(
-            owner = mainClass,
-            method = "main",
-            desc = Type.getMethodDescriptor(Type.getType(Void.TYPE), Type.getType(Array<String>::class.java)),
-            params = this.gameArgs.split(" ").toTypedArray()
-        )
-    }
+    // noop
+    override fun run() = Unit
 }
 
 fun main(args: Array<String>) {
@@ -332,5 +292,48 @@ fun main(args: Array<String>) {
     /**
      *  delegate to [ModLoaderCommand]
      */
-    ModLoaderCommand().main(args.toList())
+    val cmd = ModLoaderCommand()
+
+    // Everything after -- is game arguments
+    val ourArgs = args.takeWhile { it != "--" }
+    // Using this since it clikt pollutes stacktraces big time
+    cmd.parse(ourArgs)
+
+    // print the classpath
+    if (cmd.printClassPath) {
+        val cp = System.getProperty("java.class.path").split(File.pathSeparator)
+        for (s in cp) {
+            println(s)
+        }
+    }
+
+    // TODO: Maybe move this into a different thing
+    // locate main class
+    val mainClass = when (cmd.side) {
+        Side.CLIENT -> "net.minecraft.client.main.Main"
+        Side.SERVER -> "net.minecraft.server.Main"
+    }
+
+    // Initialize the ModLoader instance for this launch
+    ModLoader.initLoader(
+        mods = cmd.mods,
+        sourceJar = cmd.gameJarPath,
+        side = cmd.side,
+        debugTransform = cmd.debugTransformation
+    )
+
+    // Audit game classes if that is what the user chose
+    if (cmd.audit != "no") {
+        ModLoader.auditTransformations(cmd.audit)
+        return
+    }
+
+    // TODO: Maybe move this into a different thing(2)
+    // Otherwise start the game using the main class from above
+    ModLoader.start(
+        owner = mainClass,
+        method = "main",
+        desc = Type.getMethodDescriptor(Type.getType(Void.TYPE), Type.getType(Array<String>::class.java)),
+        params = args.takeLastWhile { it != "--" }.toTypedArray()
+    )
 }

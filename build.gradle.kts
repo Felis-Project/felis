@@ -1,9 +1,7 @@
 plugins {
-    // alias(libs.plugins.felis.dam)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.dokka)
-//    alias(libs.plugins.shadow)
     `maven-publish`
     application
     `java-library`
@@ -14,7 +12,7 @@ repositories {
 }
 
 group = "felis"
-version = "1.2.2-alpha"
+version = "1.3.0-alpha"
 
 val shadowJarApi: Configuration by configurations.creating {
     configurations.getByName("api").extendsFrom(this)
