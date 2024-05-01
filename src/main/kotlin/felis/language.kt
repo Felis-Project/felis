@@ -6,7 +6,7 @@ interface LanguageAdapter {
     fun <T> createInstance(specifier: String): Result<T>
 }
 
-class EntrypointException(spec: String) : IllegalArgumentException("Could not locate entrypoint specified by $spec")
+class LanguageAdapterException(spec: String) : IllegalArgumentException("Could not locate entrypoint specified by $spec")
 
 class DelegatingLanguageAdapter : LanguageAdapter, Iterable<LanguageAdapter> {
     private val children: MutableList<LanguageAdapter> = mutableListOf()
@@ -37,7 +37,7 @@ object KotlinLanguageAdapter : LanguageAdapter {
             val kClass = Class.forName(specifier, true, ModLoader.classLoader).kotlin
             kClass.objectInstance as? T
                 ?: kClass.createInstance() as? T
-                ?: throw EntrypointException(specifier)
+                ?: throw LanguageAdapterException(specifier)
         } else {
             TODO("Method/property references are not implemented yet")
         }

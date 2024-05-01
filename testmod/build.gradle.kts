@@ -1,5 +1,5 @@
 plugins {
-     alias(libs.plugins.felis.dam)
+    alias(libs.plugins.felis.dam)
 }
 
 group = "io.github.joemama"

@@ -2,6 +2,7 @@ package felis.transformer
 
 import felis.ModLoader
 import felis.PerfCounter
+import felis.asm.ClassScope
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -58,11 +59,15 @@ sealed interface ClassRef {
     val isBytesRef: Boolean
 }
 
-data class ClassContainer internal constructor(val name: String, private var ref: ClassRef, var skip: Boolean = false) :
-    ClassRef {
+data class ClassContainer internal constructor(
+    override val name: String,
+    private var ref: ClassRef,
+    var skip: Boolean = false
+) :
+    ClassRef, ClassScope {
     constructor(name: String, ref: ClassRef) : this(name, ref, false)
 
-    val internalName by lazy { this.name.replace(".", "/") }
+    override val internalName by lazy { this.name.replace(".", "/") }
 
     constructor(name: String, bytes: ByteArray) : this(name, ClassRef.BytesRef(bytes))
 

@@ -1,6 +1,5 @@
 package felis.asm
 
-import felis.transformer.ClassContainer
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.Method
@@ -12,11 +11,24 @@ open class AsmException(msg: String) : Exception(msg)
 class MethodNotFoundException(name: String, clazz: String) :
     AsmException("Method $name could not be found in target $clazz")
 
-inline fun ClassContainer.openMethod(name: String, desc: String, action: MethodScope.() -> Unit) {
+interface ClassScope {
+    val node: ClassNode
+    val name: String
+    val internalName: String
+}
+
+inline fun ClassScope.openMethod(name: String, desc: String, action: MethodScope.() -> Unit) {
     val method = this.node.methods.find { it.name == name && it.desc == desc }
     if (method == null) throw MethodNotFoundException(name, this.name)
     action(MethodScope(method, this.internalName))
 }
+
+inline fun ClassScope.openMethod(
+    name: String,
+    returnType: Type,
+    vararg params: Type,
+    action: MethodScope.() -> Unit
+) = this.openMethod(name, Type.getMethodDescriptor(returnType, *params), action)
 
 sealed interface InjectionPoint {
     companion object {

@@ -14,36 +14,21 @@ repositories {
 group = "felis"
 version = "1.3.0-alpha"
 
-val shadowJarApi: Configuration by configurations.creating {
-    configurations.getByName("api").extendsFrom(this)
-}
-val shadowJar: Configuration by configurations.creating {
-    extendsFrom(shadowJarApi)
-    configurations.getByName("implementation").extendsFrom(this)
-}
-
 dependencies {
-    shadowJarApi(libs.bundles.asm)
-    shadowJarApi(libs.tomlkt)
-    shadowJar(libs.clikt)
-    shadowJarApi(libs.kotlin.coroutines)
-    shadowJarApi(kotlin("reflect"))
-    shadowJar("org.slf4j:slf4j-api:2.0.13")
+    api(libs.bundles.asm)
+    api(libs.tomlkt)
+    implementation(libs.clikt)
+    api(libs.kotlin.coroutines)
+    api(kotlin("reflect"))
+    implementation("org.slf4j:slf4j-api:2.0.13")
 }
 
 tasks.processResources {
     expand("version" to version)
 }
 
-//tasks.withType(ShadowJar::class.java) {
-//    configurations = listOf(shadowJar)
-//    minimize()
-//    // TODO: Why does this not work?
-//    exclude("it.unimi.dsi:fastutil:.")
-//}
-
 application {
-    mainClass = "io.github.joemama.loader.MainKt"
+    mainClass = "felis.MainKt"
 }
 
 java {
