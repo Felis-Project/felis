@@ -23,11 +23,13 @@ import org.slf4j.Logger
 import java.io.*
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.*
 import javax.tools.*
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.extension
+import kotlin.io.path.isDirectory
 import kotlin.io.path.pathString
 
 /**
@@ -117,6 +119,9 @@ object ModLoader {
     lateinit var side: Side
         private set
 
+    var isAuditing = false
+        private set
+
     /**
      * Initialize this loader object.
      *
@@ -204,24 +209,37 @@ object ModLoader {
      * @param outputPath the path to a jar where transformed classes will be output
      */
     fun auditTransformations(outputPath: String) {
+        this.isAuditing = true
         this.logger.warn("Auditing game jar ${this.gameJar.path}")
         FileSystems.newFileSystem(Paths.get(outputPath), mapOf("create" to "true")).use { outputJar ->
             FileSystems.newFileSystem(this.gameJar.path).use { gameJar ->
-                for (clazz in Files.walk(gameJar.getPath("/")).filter { it.extension == "class" }) {
-                    val name = clazz.pathString.substring(1).replace("/", ".").removeSuffix(".class")
-                    val oldBytes = Files.newInputStream(clazz).use { it.readBytes() }
-                    val container = ClassContainer(name, oldBytes)
-                    this.transformer.transform(container)
+                for (file in Files.walk(gameJar.getPath("/"))) {
+                    if (file.extension == "class") {
+                        val name = file.pathString.substring(1).replace("/", ".").removeSuffix(".class")
+                        val oldBytes = Files.newInputStream(file).use { it.readBytes() }
+                        val container = ClassContainer(name, oldBytes)
+                        this.transformer.transform(container)
 
-                    val output = outputJar.getPath("/").resolve(clazz.pathString)
-                    this.logger.trace("Auditing $name")
+                        if (container.skip) continue
 
-                    output.createParentDirectories()
-                    Files.newOutputStream(
-                        output,
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.WRITE
-                    ).use { it.write(container.bytes) }
+                        val output = outputJar.getPath("/").resolve(file.pathString)
+                        this.logger.trace("Auditing $name")
+
+                        output.createParentDirectories()
+                        Files.newOutputStream(
+                            output,
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.WRITE
+                        ).use { it.write(container.bytes) }
+                    } else if (!file.isDirectory()) {
+                        val output = outputJar.getPath("/").resolve(file.pathString)
+                        output.createParentDirectories()
+                        Files.copy(
+                            file,
+                            output,
+                            StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES
+                        )
+                    }
                 }
             }
         }

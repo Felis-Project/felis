@@ -1,5 +1,5 @@
 [versions]
-felis-dam = "1.8.0-alpha"
+felis-dam = "1.8.1-alpha"
 asm = "9.7"
 tomlkt = "0.3.7"
 clikt = "4.3.0"

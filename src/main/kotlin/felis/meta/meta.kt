@@ -47,6 +47,7 @@ class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
         // behold the limits of my functional programming ability
         val (mods, libs) = modPaths
             .asSequence()
+            .filter { it.isNotEmpty() }
             .map { Paths.get(it) }
             .flatMap { Files.walk(it).asSequence() }
             .map { JarContentCollection(it) }

@@ -80,6 +80,7 @@ class StripLocator : ClassVisitor(Opcodes.ASM9) {
 
 object SideStrippingTransformation : Transformation {
     override fun transform(container: ClassContainer) {
+        if (ModLoader.isAuditing) return
         // since all classes are passed into this transformation, we better not parse/unparse them
         // if we are bytes, pass through an event-driven stripper
         if (container.isBytesRef) {
