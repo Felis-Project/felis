@@ -12,7 +12,6 @@ import felis.transformer.*
 import felis.side.SideStrippingTransformation
 import kotlinx.serialization.decodeFromString
 import net.peanuuutz.tomlkt.Toml
-import org.jetbrains.annotations.ApiStatus.Internal
 import org.slf4j.LoggerFactory
 
 import java.nio.file.Paths
@@ -37,7 +36,7 @@ import kotlin.io.path.pathString
  *
  * @author 0xJoeMama
  */
-interface LoaderPluginEntrypoint {
+fun interface LoaderPluginEntrypoint {
     fun onLoaderInit()
 }
 
@@ -124,9 +123,8 @@ object ModLoader {
      * @param mods a list of all jars this loader will attempt to load as mods. See [ModDiscoverer] for more info on how mods are loaded
      * @param sourceJar the game this loader is running from
      * @param side the **physical** side the loader is running on
-     * @param debugTransform whether or not to apply a debug transformation at startup. Used for debugging obviously
      */
-    fun initLoader(mods: List<String>, sourceJar: String, side: Side, debugTransform: Boolean) {
+    fun initLoader(mods: List<String>, sourceJar: String, side: Side) {
         this.logger.info("starting mod loader")
         this.side = side // the physical side we are running on
         this.discoverer = ModDiscoverer(mods) // the object used to locate and initialize mods
@@ -155,9 +153,6 @@ object ModLoader {
 
         // Register built-in transformations of the loader itself
         this.transformer.apply {
-            if (debugTransform) {
-                registerTransformation(DebugTransformation)
-            }
             registerTransformation(SideStrippingTransformation)
         }
 
@@ -174,7 +169,7 @@ object ModLoader {
      * @param desc the descriptor of the method. Usually this would be `([Ljava/lang/String;)V`
      * @param params the arguments passed into the method
      */
-    fun start(owner: String, method: String, desc: String, params: Array<String>) {
+    fun call(owner: String, method: String, desc: String, params: Array<String>) {
         this.logger.info("starting game")
         this.logger.debug("target game jars: {}", gameJar.path)
         this.logger.debug("game args: ${params.contentToString()}")
@@ -261,7 +256,6 @@ object ModLoader {
  * Not meant to be used outside of this file.
  * Parses cli arguments and initializes the loader.
  */
-@Internal
 internal class ModLoaderCommand : CliktCommand() {
     val mods: List<String> by option("--mods")
         .help("All directories and jar files to look for mods in separated by ':'")
@@ -274,10 +268,6 @@ internal class ModLoaderCommand : CliktCommand() {
         .help("Print the jvm classpath")
         .boolean()
         .default(false)
-    val debugTransformation: Boolean by option("--debug-t")
-        .help("Apply a debug transformation at runtime")
-        .boolean()
-        .default(false)
     val side: Side by option("--side").enum<Side> { it.name }.required()
     val audit by option("--audit")
         .default("no")
@@ -288,7 +278,7 @@ internal class ModLoaderCommand : CliktCommand() {
 }
 
 fun main(args: Array<String>) {
-    println("Modloader running using arguments: ${args.contentToString()}")
+    println("Felis running using arguments: ${args.contentToString()}")
     /**
      *  delegate to [ModLoaderCommand]
      */
@@ -307,19 +297,11 @@ fun main(args: Array<String>) {
         }
     }
 
-    // TODO: Maybe move this into a different thing
-    // locate main class
-    val mainClass = when (cmd.side) {
-        Side.CLIENT -> "net.minecraft.client.main.Main"
-        Side.SERVER -> "net.minecraft.server.Main"
-    }
-
     // Initialize the ModLoader instance for this launch
     ModLoader.initLoader(
         mods = cmd.mods,
         sourceJar = cmd.gameJarPath,
         side = cmd.side,
-        debugTransform = cmd.debugTransformation
     )
 
     // Audit game classes if that is what the user chose
@@ -328,9 +310,14 @@ fun main(args: Array<String>) {
         return
     }
 
-    // TODO: Maybe move this into a different thing(2)
-    // Otherwise start the game using the main class from above
-    ModLoader.start(
+    // locate main class
+    val mainClass = when (ModLoader.side) {
+        Side.CLIENT -> "net.minecraft.client.main.Main"
+        Side.SERVER -> "net.minecraft.server.Main"
+    }
+
+    // start the game using the main class from above
+    ModLoader.call(
         owner = mainClass,
         method = "main",
         desc = Type.getMethodDescriptor(Type.getType(Void.TYPE), Type.getType(Array<String>::class.java)),

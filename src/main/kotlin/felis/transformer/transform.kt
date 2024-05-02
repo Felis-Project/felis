@@ -5,13 +5,10 @@ import felis.PerfCounter
 import felis.asm.ClassScope
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
 import org.objectweb.asm.tree.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InputStream
-import java.io.PrintStream
 import java.net.URL
 import java.util.*
 
@@ -42,6 +39,7 @@ sealed interface ClassRef {
         }
 
         override fun bytesRef(): BytesRef = this
+
         override val node: ClassNode
             get() = throw IllegalAccessException("Bytes shouldn't be asked for a node")
         override val isNodeRef: Boolean
@@ -52,6 +50,7 @@ sealed interface ClassRef {
 
     fun nodeRef(): NodeRef
     fun bytesRef(): BytesRef
+
     val node: ClassNode
     val bytes: ByteArray
 
@@ -63,12 +62,10 @@ data class ClassContainer internal constructor(
     override val name: String,
     private var ref: ClassRef,
     var skip: Boolean = false
-) :
-    ClassRef, ClassScope {
-    constructor(name: String, ref: ClassRef) : this(name, ref, false)
-
+) : ClassRef, ClassScope {
     override val internalName by lazy { this.name.replace(".", "/") }
 
+    constructor(name: String, ref: ClassRef) : this(name, ref, false)
     constructor(name: String, bytes: ByteArray) : this(name, ClassRef.BytesRef(bytes))
 
     // Always call when modifying bytes
@@ -99,12 +96,8 @@ data class ClassContainer internal constructor(
 fun interface Transformation {
     fun transform(container: ClassContainer)
 
-    data class Named(
-        val transformation: Transformation,
-        val transformationName: String
-    ) : Transformation by transformation
+    data class Named(val name: String, val del: Transformation) : Transformation by del
 }
-
 
 class Transformer : Transformation {
     private val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
@@ -117,8 +110,8 @@ class Transformer : Transformation {
             transformations.map {
                 lazy {
                     Transformation.Named(
-                        ModLoader.languageAdapter.createInstance<Transformation>(it.path).getOrThrow(),
-                        it.name
+                        it.name,
+                        ModLoader.languageAdapter.createInstance<Transformation>(it.path).getOrThrow()
                     )
                 }
             }
@@ -133,7 +126,7 @@ class Transformer : Transformation {
         val name = container.name
         if (this.external.containsKey(name)) {
             for (t in this.external.getOrDefault(name, emptyList())) {
-                this.logger.info("transforming $name with ${t.value.transformationName}")
+                this.logger.info("transforming $name with ${t.value.name}")
                 t.value.transform(container)
                 if (container.skip) {
                     return
@@ -228,43 +221,3 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
         }
     }
 }
-
-object DebugTransformation : Transformation {
-    private val logger = LoggerFactory.getLogger(DebugTransformation::class.java)
-    override fun transform(container: ClassContainer) {
-        if (container.name == "net.minecraft.client.main.Main") {
-            val clazz = container.node
-            logger.info("Transforming $clazz with DebugTransformation")
-            val mainMethod = clazz.methods.first {
-                it.name == "main" && it.desc == Type.getMethodDescriptor(
-                    Type.VOID_TYPE,
-                    Type.getType(Array<String>::class.java)
-                )
-            }
-
-            val res = InsnList().apply {
-                add(
-                    FieldInsnNode(
-                        Opcodes.GETSTATIC,
-                        "java/lang/System",
-                        "out",
-                        Type.getDescriptor(PrintStream::class.java)
-                    )
-                )
-                add(LdcInsnNode("Hello from Debug Transformation"))
-                add(
-                    MethodInsnNode(
-                        Opcodes.INVOKEVIRTUAL,
-                        Type.getType(PrintStream::class.java).internalName,
-                        "println",
-                        Type.getMethodDescriptor(
-                            Type.VOID_TYPE, Type.getType(String::class.java)
-                        )
-                    )
-                )
-            }
-            mainMethod.instructions.insert(mainMethod.instructions.get(0), res)
-        }
-    }
-}
-

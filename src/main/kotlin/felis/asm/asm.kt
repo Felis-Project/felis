@@ -7,6 +7,7 @@ import org.objectweb.asm.tree.*
 import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 
+// TODO: Make this a different library
 open class AsmException(msg: String) : Exception(msg)
 class MethodNotFoundException(name: String, clazz: String) :
     AsmException("Method $name could not be found in target $clazz")
@@ -46,6 +47,7 @@ sealed interface InjectionPoint {
             origin.last.let { origin.insert(it, insns) }
     }
 
+    // TODO: These 2 will only inject in the first occurence due to a smoll(TM) bug in their implementation
     data object Return : InjectionPoint {
         override fun inject(scope: MethodScope, insns: InsnList, origin: InsnList) =
             origin.filter { (Opcodes.IRETURN..Opcodes.RETURN).contains(it.opcode) }.forEach {
@@ -79,10 +81,11 @@ sealed interface InjectionPoint {
         )
 
         override fun inject(scope: MethodScope, insns: InsnList, origin: InsnList) {
-            var invokes = origin.filter { it.type == AbstractInsnNode.METHOD_INSN }
+            var invokes = origin
+                .filter { it.type == AbstractInsnNode.METHOD_INSN }
                 .map { it as MethodInsnNode }
                 .filter { it.owner == this.owner.internalName && it.desc == this.method.descriptor }
-            if (invokes.isEmpty()) logger.error("Could not locate injection point at $owner for call to $method")
+            if (invokes.isEmpty()) logger.error("Could not locate injection point at ${owner.internalName} for call to $method")
             if (this.limit != null) {
                 invokes = invokes.take(this.limit)
             }
