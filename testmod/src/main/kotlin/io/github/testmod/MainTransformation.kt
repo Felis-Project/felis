@@ -1,4 +1,4 @@
-package felis.testmod
+package io.github.testmod
 
 import felis.asm.AccessModifier
 import felis.asm.InjectionPoint

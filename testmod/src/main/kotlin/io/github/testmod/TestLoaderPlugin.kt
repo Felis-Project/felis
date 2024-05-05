@@ -1,4 +1,4 @@
-package felis.testmod
+package io.github.testmod
 
 import felis.LoaderPluginEntrypoint
 import felis.ModLoader
@@ -38,9 +38,9 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
         val invoker = MethodHandles.publicLookup().findStatic(cls, "test", MethodType.methodType(Void.TYPE))
         invoker.invokeExact()
 
-        this.logger.info("Doing stuff")
+        logger.info("Doing stuff")
         ModLoader.transformer.registerTransformation {
-            this.logger.info("${it.name} is ${it.bytes.size} bytes in size")
+            logger.info("${it.name} is ${it.bytes.size} bytes in size")
         }
     }
 }

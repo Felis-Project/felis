@@ -1,3 +1,12 @@
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
+
+buildscript {
+    dependencies {
+        classpath("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    }
+}
+
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
@@ -12,7 +21,7 @@ repositories {
 }
 
 group = "felis"
-version = "1.3.1-alpha"
+version = "1.4.0-alpha"
 
 dependencies {
     api(libs.bundles.asm)
@@ -67,5 +76,21 @@ publishing {
                 password = System.getenv("REPSY_PASSWORD")
             }
         }
+    }
+}
+
+tasks.create("launcherJson") {
+    doLast {
+        val libs = file("libs.txt").toPath()
+        val writer = Files.newBufferedWriter(
+            libs,
+            StandardOpenOption.WRITE,
+            StandardOpenOption.TRUNCATE_EXISTING,
+            StandardOpenOption.CREATE
+        )
+        configurations.runtimeClasspath.get().resolvedConfiguration.lenientConfiguration.allModuleDependencies.forEach {
+            writer.write("${it.moduleGroup}:${it.moduleName}:${it.moduleVersion}\n")
+        }
+        writer.close()
     }
 }

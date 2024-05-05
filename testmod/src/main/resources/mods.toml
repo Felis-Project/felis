@@ -5,8 +5,8 @@ version = "${version}"
 [[transforms]]
 name = "test transform"
 target = "net.minecraft.client.main.Main"
-path = "felis.testmod.MainTransformation"
+path = "io.github.testmod.MainTransformation"
 
 [[entrypoints]]
 id = "loader_plugin"
-path = "felis.testmod.TestLoaderPlugin"
+path = "io.github.testmod.TestLoaderPlugin"

@@ -14,7 +14,7 @@ import kotlin.streams.asSequence
 
 open class ModDiscoveryException(msg: String) : Exception(msg)
 class ModMetaException(msg: String) : ModDiscoveryException(msg)
-object NotAMod : Throwable() {
+data object NotAMod : Throwable() {
     private fun readResolve(): Any = NotAMod
 }
 

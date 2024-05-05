@@ -144,6 +144,38 @@ class Transformer : Transformation {
     }
 }
 
+class IgnoreForTransformations {
+    val packages: MutableList<Package> = mutableListOf()
+    val classes: MutableList<String> = mutableListOf()
+
+    data class Package(val name: String, val absolute: Boolean) {
+        fun matches(name: String): Boolean {
+            return if (this.absolute) {
+                val innerPackage = name.lastIndexOf('.')
+                name.substring(0..innerPackage) == this.name
+            } else {
+                name.startsWith(this.name)
+            }
+        }
+    }
+
+    fun isIgnored(name: String): Boolean = this.packages.any { it.matches(name) } || name in classes
+
+    fun ignorePackage(packageName: String): IgnoreForTransformations {
+        this.packages.add(Package("$packageName.", false))
+        return this
+    }
+
+    fun ignorePackageAbsolute(packageName: String): IgnoreForTransformations {
+        this.packages.add(Package("$packageName.", true))
+        return this
+    }
+
+    fun ignoreClass(name: String) {
+        this.classes.add(name)
+    }
+}
+
 /**
  * This class loader uses the classloading delegation model to:
  * 1. Use the classpath for loader/minecraft dependencies
@@ -154,9 +186,11 @@ class Transformer : Transformation {
  */
 class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     private val logger: Logger = LoggerFactory.getLogger(TransformingClassLoader::class.java)
-    private val classLoadPerfCounter = PerfCounter("Loaded {} class data in {}s, Average load time {}ms", wait = true)
+    private val classLoadPerfCounter =
+        PerfCounter("Loaded {} class data in {}s, Average load time {}ms", wait = true)
     private val transformationPerfCounter =
         PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms", wait = true)
+    val ignored = IgnoreForTransformations()
 
     private val contentCollection: ContentCollection by lazy {
         NestedContentCollection(
@@ -175,25 +209,47 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     }
 
     override fun getResourceAsStream(name: String): InputStream? =
-        this.contentCollection.openStream(name) ?: super.getResourceAsStream(name)
+        this.contentCollection.openStream(name) ?: getSystemResourceAsStream(name)
 
-    // we are given a class that parent loaders couldn't load. It's our turn to load it using the gameJar
-    public override fun findClass(name: String): Class<*>? {
-        synchronized(this.getClassLoadingLock(name)) {
-            val classData = this.classLoadPerfCounter.timed { this.getClassData(name) }
-            if (classData != null) {
-                val bytes = this.transformationPerfCounter.timed {
-                    ModLoader.transformer.transform(classData)
-                    if (!classData.skip) {
-                        classData.bytes
-                    } else {
-                        null
+    override fun loadClass(name: String, resolve: Boolean): Class<*> = synchronized(getClassLoadingLock(name)) {
+        // first see if it's a platform class
+        val clazz: Class<*> = try {
+            getPlatformClassLoader().loadClass(name)
+        } catch (e: ClassNotFoundException) {
+            if (this.ignored.isIgnored(name)) {
+                findSystemClass(name)
+            } else {
+                var c: Class<*>? = this.findLoadedClass(name)
+                if (c == null) {
+                    c = this.findClass(name)
+                    if (c == null) {
+                        c = this.findSystemClass(name)
+                        if (c == null) throw ClassNotFoundException("Couldn't find class $name")
                     }
-                }
+                    c
+                } else c
+            }
+        }
 
-                if (bytes != null) {
-                    return this.defineClass(name, bytes, 0, bytes.size)
+        if (resolve) resolveClass(clazz)
+        return clazz
+    }
+
+    // load class and apply defined transformations
+    public override fun findClass(name: String): Class<*>? {
+        val classData = this.classLoadPerfCounter.timed { this.getClassData(name) }
+        if (classData != null) {
+            val bytes = this.transformationPerfCounter.timed {
+                ModLoader.transformer.transform(classData)
+                if (!classData.skip) {
+                    classData.bytes
+                } else {
+                    null
                 }
+            }
+
+            if (bytes != null) {
+                return this.defineClass(name, bytes, 0, bytes.size)
             }
         }
 

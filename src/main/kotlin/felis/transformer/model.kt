@@ -46,7 +46,7 @@ data class JarContentCollection(val path: Path) : ContentCollection {
         this.getContentUrl(name)?.let { listOf(it) } ?: emptyList()
 }
 
-object EmptyContentCollection : ContentCollection {
+data object EmptyContentCollection : ContentCollection {
     override fun getContentUrl(name: String): URL? = null
     override fun getContentPath(path: String): Path? = null
     override fun openStream(name: String): InputStream? = null

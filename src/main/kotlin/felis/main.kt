@@ -137,7 +137,19 @@ object ModLoader {
         this.gameJar = JarContentCollection(Paths.get(sourceJar)) // the jar the game is located in
         this.languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
         this.transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
-        this.classLoader = TransformingClassLoader() // the class loader that uses everything in here to work
+        this.classLoader = TransformingClassLoader().also {  // the class loader that uses everything in here to work
+            it.ignored.apply {
+                ignorePackage("kotlin")
+                ignorePackageAbsolute("felis")
+                ignorePackageAbsolute("felis.meta")
+                ignorePackageAbsolute("felis.side")
+                ignorePackageAbsolute("felis.transformer")
+                ignorePackageAbsolute("felis.asm")
+                ignorePackage("org.objectweb.asm")
+                ignorePackage("net.peanuuutz.tomlkt")
+                ignorePackage("org.slf4j")
+            }
+        }
 
         // register ourselves as a built-in mod
         this.discoverer.registerMod(
@@ -305,7 +317,7 @@ fun main(args: Array<String>) {
     // Everything after -- is game arguments
     val ourArgs = args.takeWhile { it != "--" }
     // Using this since it clikt pollutes stacktraces big time
-    cmd.parse(ourArgs)
+    cmd.main(ourArgs)
 
     // print the classpath
     if (cmd.printClassPath) {
