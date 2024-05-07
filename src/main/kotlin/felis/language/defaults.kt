@@ -1,24 +1,10 @@
-package felis
+package felis.language
 
+import felis.ModLoader
 import kotlin.reflect.full.createInstance
 
-interface LanguageAdapter {
-    fun <T> createInstance(specifier: String): Result<T>
-}
-
-class LanguageAdapterException(spec: String) : IllegalArgumentException("Could not locate entrypoint specified by $spec")
-
-class DelegatingLanguageAdapter : LanguageAdapter, Iterable<LanguageAdapter> {
-    private val children: MutableList<LanguageAdapter> = mutableListOf()
-
-    fun registerAdapter(adapter: LanguageAdapter) = this.children.add(adapter)
-    override fun <T> createInstance(specifier: String): Result<T> = this
-        .asSequence()
-        .map { it.createInstance<T>(specifier) }
-        .first { it.isSuccess }
-
-    override fun iterator(): Iterator<LanguageAdapter> = this.children.iterator()
-}
+class LanguageAdapterException(spec: String) :
+    IllegalArgumentException("Could not locate entrypoint specified by $spec")
 
 object JavaLanguageAdapter : LanguageAdapter {
     @Suppress("UNCHECKED_CAST") // fuck you type safety

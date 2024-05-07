@@ -30,6 +30,7 @@ dependencies {
     api(libs.kotlin.coroutines)
     api(kotlin("reflect"))
     implementation("org.slf4j:slf4j-api:2.0.13")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
 
 tasks.processResources {

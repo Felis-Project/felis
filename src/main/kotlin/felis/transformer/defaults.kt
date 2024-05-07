@@ -7,19 +7,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
 
-/**
- * Basically the implementation of what I like to call a "Jar Tree".
- *
- * @author 0xJoeMama
- */
-interface ContentCollection {
-    fun getContentUrl(name: String): URL?
-    fun getContentPath(path: String): Path?
-    fun <R> withStream(name: String, action: (InputStream) -> R): R? = this.openStream(name)?.use(action)
-    fun openStream(name: String): InputStream?
-    fun getContentUrls(name: String): Collection<URL>
-}
-
 class NestedContentCollection(private val children: Iterable<ContentCollection>) : ContentCollection {
     override fun getContentUrl(name: String): URL? = this.children.firstNotNullOfOrNull { it.getContentUrl(name) }
     override fun getContentPath(path: String): Path? = this.children.firstNotNullOfOrNull { it.getContentPath(path) }
