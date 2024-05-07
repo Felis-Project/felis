@@ -16,7 +16,7 @@ class Transformer : Transformation {
                 lazy {
                     Transformation.Named(
                         it.name,
-                        ModLoader.languageAdapter.createInstance<Transformation>(it.path).getOrThrow()
+                        ModLoader.languageAdapter.createInstance(it.path, Transformation::class.java).getOrThrow()
                     )
                 }
             }

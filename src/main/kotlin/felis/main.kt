@@ -12,7 +12,7 @@ import kotlin.reflect.KProperty
  * Not meant to be used outside of this file.
  * Parses cli arguments and initializes the loader.
  */
-object EnvironmentParser {
+object FelisLaunchEnvironment {
     sealed class DefaultValue<out T> {
         class Value<out T>(val t: T) : DefaultValue<T>()
         data object NoValue : DefaultValue<Nothing>()
@@ -24,11 +24,10 @@ object EnvironmentParser {
         private val creator: (String) -> T
     ) : ReadOnlyProperty<Any, T> {
         override fun getValue(thisRef: Any, property: KProperty<*>): T =
-            System.getProperty(name)?.let(creator)
-                ?: when (default) {
-                    DefaultValue.NoValue -> throw IllegalStateException("Property $name must be specified or have a default value")
-                    is DefaultValue.Value -> default.t
-                }
+            System.getProperty(name)?.let(creator) ?: when (default) {
+                DefaultValue.NoValue -> throw IllegalStateException("Property $name must be specified or have a default value")
+                is DefaultValue.Value -> default.t
+            }
     }
 
     val side: Side by OptionKey("felis.side") { enumValueOf(it) }
@@ -45,17 +44,16 @@ object EnvironmentParser {
         Paths.get(it)
     }
 
-    override fun toString(): String {
-        return "Felis Launch Environment: (side=$side, mods=$mods, launcher=$launcher, printClassPath=$printClassPath, audit=$audit)"
-    }
+    override fun toString(): String =
+        "Felis launching with options: (side=$side, mods=$mods, launcher=$launcher, printClassPath=$printClassPath, audit=$audit)"
 }
 
 fun main(args: Array<String>) {
     println("Felis running on ${System.getProperty("java.vendor")}: ${System.getProperty("java.version")} using arguments: ${args.contentToString()}")
-    println(EnvironmentParser)
+    println(FelisLaunchEnvironment)
 
     // print the classpath
-    if (EnvironmentParser.printClassPath) {
+    if (FelisLaunchEnvironment.printClassPath) {
         val cp = System.getProperty("java.class.path").split(File.pathSeparator)
         for (s in cp) {
             println(s)
@@ -64,10 +62,10 @@ fun main(args: Array<String>) {
 
     // Initialize the ModLoader instance for this launch
     ModLoader.initLoader(
-        side = EnvironmentParser.side,
-        launcher = EnvironmentParser.launcher,
-        mods = EnvironmentParser.mods,
+        side = FelisLaunchEnvironment.side,
+        launcher = FelisLaunchEnvironment.launcher,
+        mods = FelisLaunchEnvironment.mods,
         gameArgs = args,
-        audit = EnvironmentParser.audit,
+        audit = FelisLaunchEnvironment.audit,
     )
 }

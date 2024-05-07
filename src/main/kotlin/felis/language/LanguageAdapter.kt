@@ -1,5 +1,5 @@
 package felis.language
 
 interface LanguageAdapter {
-    fun <T> createInstance(specifier: String): Result<T>
+    fun <T> createInstance(specifier: String, clazz: Class<out T>): Result<T>
 }

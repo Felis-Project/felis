@@ -9,8 +9,7 @@ class GameInstance(
     meta: ModMeta,
     val mainClass: String,
     val args: Array<String>
-) :
-    Mod(contentCollection, meta) {
+) : Mod(contentCollection, meta) {
     val path by contentCollection::path
 }
 

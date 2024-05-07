@@ -29,7 +29,7 @@ import kotlin.io.path.pathString
 
 /**
  * The central object of the mod loading process.
- * This object is first created at startup, initialized only once through the [ModLoaderCommand] class,
+ * This object is first created at startup, initialized only once through the [main] method
  * and then used for the rest of the loading process.
  *
  * @author 0xJoeMama
@@ -279,7 +279,7 @@ object ModLoader {
             .asSequence()
             .flatMap { it.meta.entrypoints }
             .filter { it.id == id }
-            .map { this.languageAdapter.createInstance<T>(it.path).getOrThrow() }
+            .map { this.languageAdapter.createInstance(it.path, T::class.java).getOrThrow() }
             .map { method(it) }
             .toList()
 }
