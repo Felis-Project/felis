@@ -7,8 +7,8 @@ class IgnoreForTransformations {
     data class Package(val name: String, val absolute: Boolean) {
         fun matches(name: String): Boolean {
             return if (this.absolute) {
-                val idx = name.indexOf(this.name)
-                idx != -1 && idx == name.lastIndexOf(this.name)
+                val innerPackage = name.lastIndexOf('.')
+                name.substring(0..innerPackage) == this.name
             } else {
                 name.startsWith(this.name)
             }

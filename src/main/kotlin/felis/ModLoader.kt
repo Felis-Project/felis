@@ -113,7 +113,7 @@ object ModLoader {
      * @param launcher the launcher for the game this loader is running
      * @param side the **physical** side the loader is running on
      */
-    fun initLoader(mods: List<String>, side: Side, launcher: GameLauncher, gameArgs: Array<String>, audit: Path?) {
+    fun initLoader(mods: List<Path>, side: Side, launcher: GameLauncher, gameArgs: Array<String>, audit: Path?) {
         this.logger.info("starting mod loader")
         this.side = side // the physical side we are running on
         this.discoverer = ModDiscoverer(mods) // the object used to locate and initialize mods
@@ -143,7 +143,7 @@ object ModLoader {
         // register ourselves as a built-in mod
         this.discoverer.registerMod(
             Mod(
-                JarContentCollection(Paths.get(ModLoader.javaClass.protectionDomain.codeSource.location.toURI())),
+                EmptyContentCollection,
                 classLoader.getResourceAsStream("loader.toml")
                     ?.use { String(it.readAllBytes()) }
                     ?.let { toml.decodeFromString<ModMeta>(it) }

@@ -12,6 +12,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 
 class MinecraftLauncher : GameLauncher {
     override fun instantiate(args: Array<String>): GameInstance {
@@ -22,6 +23,7 @@ class MinecraftLauncher : GameLauncher {
         }
         val mainClassFile = mainClass.replace(".", "/") + ".class"
         for (cpEntry in cp) {
+            if (cpEntry.isDirectory()) continue
             FileSystems.newFileSystem(cpEntry).use { cpJar ->
                 if (cpJar.getPath(mainClassFile).exists()) {
                     val version = Files.readString(cpJar.getPath("version.json")).let {
@@ -40,4 +42,6 @@ class MinecraftLauncher : GameLauncher {
         }
         throw GameNotFound("Minecraft")
     }
+
+    override fun toString(): String = MinecraftLauncher::class.java.name
 }

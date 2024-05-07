@@ -5,11 +5,11 @@ import felis.util.PerfCounter
 import kotlinx.serialization.SerializationException
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
-import java.nio.file.Paths
-import kotlin.io.path.name
+import java.nio.file.Path
+import kotlin.io.path.*
 import kotlin.streams.asSequence
 
-class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
+class ModDiscoverer(modPaths: List<Path>) : Iterable<Mod> {
     // TODO: Use Delegates.observable to automatically allow transformer to pick up changes
     private val mods: MutableList<Mod> = mutableListOf()
     val libs = mutableListOf<JarContentCollection>()
@@ -18,13 +18,14 @@ class ModDiscoverer(modPaths: List<String>) : Iterable<Mod> {
     init {
         this.logger.info("mod discovery running for files $modPaths")
         val perfcounter = PerfCounter()
+        for (nonExistingModDir in modPaths.filter { it.notExists() }.filter { it.extension.isEmpty() }) {
+            nonExistingModDir.createDirectory()
+        }
 
         // behold the limits of my functional programming ability
         val (mods, libs) = modPaths
             .asSequence()
-            .filter { it.isNotEmpty() }
-            .map { Paths.get(it) }
-            .flatMap { Files.walk(it).asSequence() }
+            .flatMap { Files.walk(it).filter(Path::isRegularFile).asSequence() }
             .map { JarContentCollection(it) }
             .fold(Pair(mutableListOf<Mod>(), mutableListOf<JarContentCollection>())) { acc, contentCollection ->
                 val (mods, libs) = acc

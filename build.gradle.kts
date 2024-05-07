@@ -26,10 +26,9 @@ version = "1.4.0-alpha"
 dependencies {
     api(libs.bundles.asm)
     api(libs.tomlkt)
-    implementation(libs.clikt)
     api(libs.kotlin.coroutines)
     api(kotlin("reflect"))
-    implementation("org.slf4j:slf4j-api:2.0.13")
+    implementation(libs.slf4j)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
 

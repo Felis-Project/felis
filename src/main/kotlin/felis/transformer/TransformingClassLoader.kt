@@ -29,7 +29,7 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     private val contentCollection: ContentCollection by lazy {
         NestedContentCollection(
             buildList {
-                add(ModLoader.game) // needs to be first because minecrafthonk
+                add(ModLoader.game)
                 addAll(ModLoader.discoverer)
                 addAll(ModLoader.discoverer.libs)
             }
