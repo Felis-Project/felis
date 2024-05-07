@@ -122,23 +122,22 @@ object ModLoader {
         this.transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
         this.game = launcher.instantiate(gameArgs) // create the instance of the game
         this.discoverer.registerMod(this.game) // register the game
-        this.classLoader = TransformingClassLoader().also {  // the class loader that uses everything in here to work
-            it.ignored.apply {
-                ignorePackage("kotlin")
-                ignorePackage("kotlinx")
-                ignorePackage("org.objectweb.asm")
-                ignorePackage("net.peanuuutz.tomlkt")
-                ignorePackage("org.slf4j")
-                ignorePackage("org.lwjgl")
-                ignorePackageAbsolute("felis")
-                ignorePackageAbsolute("felis.meta")
-                ignorePackageAbsolute("felis.side")
-                ignorePackageAbsolute("felis.transformer")
-                ignorePackageAbsolute("felis.asm")
-                ignorePackageAbsolute("felis.launcher")
-                ignorePackageAbsolute("felis.language")
-                ignorePackageAbsolute("felis.util")
-            }
+        this.classLoader = TransformingClassLoader()  // the class loader that uses everything in here to work
+        this.classLoader.ignored.apply {
+            ignorePackage("kotlin")
+            ignorePackage("kotlinx")
+            ignorePackage("org.objectweb.asm")
+            ignorePackage("net.peanuuutz.tomlkt")
+            ignorePackage("org.slf4j")
+            ignorePackage("org.lwjgl")
+            ignorePackageAbsolute("felis")
+            ignorePackageAbsolute("felis.meta")
+            ignorePackageAbsolute("felis.side")
+            ignorePackageAbsolute("felis.transformer")
+            ignorePackageAbsolute("felis.asm")
+            ignorePackageAbsolute("felis.launcher")
+            ignorePackageAbsolute("felis.language")
+            ignorePackageAbsolute("felis.util")
         }
 
         // register ourselves as a built-in mod

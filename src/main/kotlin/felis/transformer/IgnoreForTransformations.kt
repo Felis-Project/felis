@@ -1,14 +1,14 @@
 package felis.transformer
 
 class IgnoreForTransformations {
-    val packages: MutableList<Package> = mutableListOf()
-    val classes: MutableList<String> = mutableListOf()
+    private val packages: MutableList<Package> = mutableListOf()
+    private val classes: MutableList<String> = mutableListOf()
 
     data class Package(val name: String, val absolute: Boolean) {
         fun matches(name: String): Boolean {
             return if (this.absolute) {
-                val innerPackage = name.lastIndexOf('.')
-                name.substring(0..innerPackage) == this.name
+                val idx = name.indexOf(this.name)
+                idx != -1 && idx == name.lastIndexOf(this.name)
             } else {
                 name.startsWith(this.name)
             }

@@ -4,7 +4,7 @@ import felis.ModLoader
 import kotlin.reflect.full.createInstance
 
 class LanguageAdapterException(spec: String) :
-    IllegalArgumentException("Could not locate entrypoint specified by $spec")
+    IllegalArgumentException("Could not locate class specified by $spec")
 
 object JavaLanguageAdapter : LanguageAdapter {
     @Suppress("UNCHECKED_CAST") // fuck you type safety
