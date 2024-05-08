@@ -225,7 +225,7 @@ object ModLoader {
     private fun auditTransformations(outputPath: Path) {
         this.isAuditing = true
         this.logger.warn("Auditing game jar ${this.game.path}")
-        FileSystems.newFileSystem(outputPath, mapOf("create" to "true")).use { outputJar ->
+        FileSystems.newFileSystem(outputPath.createParentDirectories(), mapOf("create" to "true")).use { outputJar ->
             FileSystems.newFileSystem(this.game.path).use { gameJar ->
                 for (file in Files.walk(gameJar.getPath("/"))) {
                     if (file.extension == "class") {
