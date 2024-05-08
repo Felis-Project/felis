@@ -84,19 +84,9 @@ publishing {
     }
 }
 
-tasks.create("launcherJson") {
-    doLast {
-        val libs = file("libs.txt").toPath()
-        val writer = Files.newBufferedWriter(
-            libs,
-            StandardOpenOption.WRITE,
-            StandardOpenOption.TRUNCATE_EXISTING,
-            StandardOpenOption.CREATE
-        )
-        configurations.runtimeClasspath.get().resolvedConfiguration.lenientConfiguration.allModuleDependencies.forEach {
-            if (it.moduleArtifacts.isNotEmpty())
-                writer.write("${it.moduleGroup}:${it.moduleName}:${it.moduleVersion}\n")
-        }
-        writer.close()
-    }
+tasks.register("launcherJson", LauncherJsonTask::class.java) {
+    gameVersion.set("1.20.6")
+    repoMap.put(
+        "io.github.joemama:actually-tiny-remapper:1.1.0-alpha", "https://repo.repsy.io/mvn/0xjoemama/public/"
+    )
 }

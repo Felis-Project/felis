@@ -24,6 +24,8 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
         PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms", wait = true)
     private val classLoadPerfCounter =
         PerfCounter("Loaded {} classes in {}s. Average load time was {}ms", wait = true)
+    private val internal =
+        PerfCounter(wait = true)
     val ignored = IgnoreForTransformations()
 
     private val contentCollection: ContentCollection by lazy {
@@ -86,7 +88,8 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
             }
 
             if (bytes != null) {
-                return this.defineClass(name, bytes, 0, bytes.size)
+                // define class is line amazingly slow. We are talking half our class loading time. So call it only in this rare case
+                return this.internal.timed { this.defineClass(name, bytes, 0, bytes.size) }
             }
         }
 

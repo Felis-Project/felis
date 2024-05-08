@@ -7,6 +7,8 @@
 /build/
 
 /.idea/
+.run/
+run
 
 # mc run dir
 */run/

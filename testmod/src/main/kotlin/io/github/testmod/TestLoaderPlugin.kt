@@ -39,8 +39,8 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
         invoker.invokeExact()
 
         logger.info("Doing stuff")
-        ModLoader.transformer.registerTransformation {
-            logger.info("${it.name} is ${it.bytes.size} bytes in size")
-        }
+//        ModLoader.transformer.registerTransformation {
+//            logger.info("${it.name} is ${it.bytes.size} bytes in size")
+//        }
     }
 }

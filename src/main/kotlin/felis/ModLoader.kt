@@ -211,6 +211,7 @@ object ModLoader {
             MethodType.fromMethodDescriptorString(desc, null)
         )
 
+        this.logger.debug("Calling $owner#main")
         // finally call the method
         mainMethod.invokeExact(params)
     }
