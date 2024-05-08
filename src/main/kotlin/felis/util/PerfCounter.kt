@@ -1,4 +1,4 @@
-package felis
+package felis.util
 
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration
@@ -25,8 +25,9 @@ class PerfCounter(private val message: String = "{} actions in {}s. Average time
     }
 
     init {
-        if (wait)
+        if (wait) synchronized(counters) {
             counters.add(this)
+        }
     }
 
     var totalDuration: Duration = Duration.ZERO
