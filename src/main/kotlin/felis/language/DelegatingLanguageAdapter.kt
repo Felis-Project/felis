@@ -7,7 +7,14 @@ class DelegatingLanguageAdapter : LanguageAdapter, Iterable<LanguageAdapter> {
     override fun <T> createInstance(specifier: String, clazz: Class<out T>): Result<T> = this
         .asSequence()
         .map { it.createInstance(specifier, clazz) }
-        .find { it.isSuccess } ?: throw LanguageAdapterException(specifier)
+        .fold(Result.failure(LanguageAdapterException(specifier))) { prev, curr ->
+            if (curr.isSuccess) {
+                curr
+            } else {
+                prev.exceptionOrNull()?.addSuppressed(curr.exceptionOrNull())
+                prev
+            }
+        }
 
     override fun iterator(): Iterator<LanguageAdapter> = this.children.iterator()
 }

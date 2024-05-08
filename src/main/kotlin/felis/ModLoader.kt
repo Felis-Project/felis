@@ -190,7 +190,7 @@ object ModLoader {
      */
     fun call(owner: String, method: String, desc: String, params: Array<String>) {
         this.logger.info("starting game")
-        this.logger.debug("target game jars: {}", this.game)
+        this.logger.debug("target game jars: {}", this.game.path)
         this.logger.debug("game args: ${params.contentToString()}")
 
         // create a mod list.

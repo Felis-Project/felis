@@ -18,6 +18,10 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven {
+        name = "Felis Repo"
+        url = uri("https://repsy.io/mvn/0xjoemama/public/")
+    }
 }
 
 group = "felis"
@@ -30,6 +34,7 @@ dependencies {
     api(kotlin("reflect"))
     implementation(libs.slf4j)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("io.github.joemama:actually-tiny-remapper:1.1.0-alpha")
 }
 
 tasks.processResources {
@@ -89,7 +94,8 @@ tasks.create("launcherJson") {
             StandardOpenOption.CREATE
         )
         configurations.runtimeClasspath.get().resolvedConfiguration.lenientConfiguration.allModuleDependencies.forEach {
-            writer.write("${it.moduleGroup}:${it.moduleName}:${it.moduleVersion}\n")
+            if (it.moduleArtifacts.isNotEmpty())
+                writer.write("${it.moduleGroup}:${it.moduleName}:${it.moduleVersion}\n")
         }
         writer.close()
     }

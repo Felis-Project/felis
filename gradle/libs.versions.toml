@@ -6,7 +6,7 @@ kotlin-coroutines = "1.8.0"
 kotlin-serialization = "1.9.23"
 dokka = "1.9.20"
 kotlin = "1.9.23"
-slf4j = "2.0.13"
+slf4j = "2.0.9" # matching the mc version
 
 [libraries]
 asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
