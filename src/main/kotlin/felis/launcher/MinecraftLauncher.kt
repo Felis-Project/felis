@@ -55,7 +55,10 @@ class MinecraftLauncher : GameLauncher {
                     }
                     // TODO: Handle server bundler here as well
                     val versionId = version["id"]!!.jsonPrimitive.content
-                    val minecraftJar = if (!remap) cpEntry else deobfuscate(cpEntry, versionId)
+                    val minecraftJar = if (!remap) {
+                        this.logger.debug("Not remapping. felis.remap was false or not specified")
+                        cpEntry
+                    } else deobfuscate(cpEntry, versionId)
 
                     return GameInstance(
                         JarContentCollection(minecraftJar),

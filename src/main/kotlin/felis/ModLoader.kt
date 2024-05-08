@@ -197,7 +197,7 @@ object ModLoader {
         // TODO: Perhaps make this prettier in the future
         val sw = StringWriter()
         sw.append("mods currently running: ")
-        discoverer.forEach {
+        this.discoverer.forEach {
             sw.appendLine()
             sw.append("- ${it.meta.modid}: ${it.meta.version}")
         }

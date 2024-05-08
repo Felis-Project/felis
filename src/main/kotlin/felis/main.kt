@@ -32,7 +32,7 @@ object FelisLaunchEnvironment {
 
     val side: Side by OptionKey("felis.side") { enumValueOf(it) }
     val mods: List<Path> by OptionKey("felis.mods") { value ->
-        value.split(File.pathSeparator).map { Paths.get(it) }
+        value.split(File.pathSeparator).filter { it.isNotEmpty() }.map { Paths.get(it) }
     }
     val launcher: GameLauncher by OptionKey("felis.launcher", DefaultValue.Value(MinecraftLauncher())) {
         Class.forName(it).getDeclaredConstructor().newInstance() as GameLauncher
