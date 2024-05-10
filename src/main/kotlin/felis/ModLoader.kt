@@ -10,7 +10,6 @@ import felis.meta.*
 import felis.side.Side
 import felis.side.SideStrippingTransformation
 import felis.transformer.*
-import net.peanuuutz.tomlkt.Toml
 import org.objectweb.asm.Type
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -32,15 +31,10 @@ import kotlin.io.path.pathString
  */
 // TODO/Missing Features for initial release
 // 1. Useful mod metadata entries
+// 2. Decouple loader internal to remove global variable usage within the loader itself
 // 3. JarInJar
+@Suppress("MemberVisibilityCanBePrivate")
 object ModLoader {
-    /**
-     * An instance of a TOML object used for deserialization of mod metadata.
-     */
-    val toml = Toml {
-        ignoreUnknownKeys = true
-    }
-
     /**
      * Logger
      */
@@ -131,6 +125,7 @@ object ModLoader {
             ignorePackage("org.slf4j")
             ignorePackage("org.lwjgl")
             ignorePackageAbsolute("felis")
+            ignorePackage("felis.api")
             ignorePackageAbsolute("felis.meta")
             ignorePackageAbsolute("felis.side")
             ignorePackageAbsolute("felis.transformer")
@@ -147,9 +142,7 @@ object ModLoader {
         }
 
         // Register built-in transformations of the loader itself
-        this.transformer.apply {
-            registerTransformation(SideStrippingTransformation)
-        }
+        this.transformer.registerTransformation(SideStrippingTransformation)
 
         // call all loader plugin entrypoints after we set ourselves up
         this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)

@@ -1,15 +1,21 @@
 package felis.meta
 
-import felis.ModLoader
 import felis.transformer.ContentCollection
 import felis.util.PerfCounter
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
+import net.peanuuutz.tomlkt.Toml
 import org.slf4j.LoggerFactory
+
+typealias Modid = String
 
 class ModDiscoverer {
     companion object {
         const val MOD_META = "mods.toml"
+        val toml = Toml {
+            ignoreUnknownKeys = true
+            explicitNulls = false
+        }
     }
 
     private val internalMods = hashMapOf<Modid, Mod>()
@@ -65,7 +71,7 @@ class ModDiscoverer {
             }
 
             try {
-                val meta = ModLoader.toml.decodeFromString<ModMeta>(metaToml)
+                val meta = toml.decodeFromString<ModMeta>(metaToml)
                 mods += Mod(cc, meta)
             } catch (e: SerializationException) {
                 val top = ModDiscoveryError("Mod $cc had a malformatted $MOD_META file(at $url)")
@@ -83,5 +89,3 @@ class ModDiscoverer {
         }
     }
 }
-
-typealias Modid = String

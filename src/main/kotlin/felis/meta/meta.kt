@@ -1,6 +1,7 @@
 package felis.meta
 
-import kotlinx.serialization.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import net.peanuuutz.tomlkt.TomlTable
 
 // TODO: New schema
