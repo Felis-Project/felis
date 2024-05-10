@@ -1,6 +1,3 @@
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
-
 buildscript {
     dependencies {
         classpath("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
@@ -25,7 +22,7 @@ repositories {
 }
 
 group = "felis"
-version = "1.4.0-alpha"
+version = "1.5.0-alpha"
 
 dependencies {
     api(libs.bundles.asm)

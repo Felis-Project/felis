@@ -21,6 +21,7 @@ abstract class LauncherJsonTask : DefaultTask() {
 
     @Serializable
     data class VersionJson(
+        val id: String,
         val inheritsFrom: String,
         val type: String,
         val libraries: List<Library>,
@@ -49,6 +50,7 @@ abstract class LauncherJsonTask : DefaultTask() {
             }.sortedBy { it.name }
 
         val version = VersionJson(
+            id = this.gameVersion.get() + "-Felis",
             inheritsFrom = this.gameVersion.get(),
             type = "release",
             libraries = libs,

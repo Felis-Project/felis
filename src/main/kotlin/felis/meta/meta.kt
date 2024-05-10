@@ -3,6 +3,7 @@ package felis.meta
 import kotlinx.serialization.*
 import net.peanuuutz.tomlkt.TomlTable
 
+// TODO: New schema
 @Serializable
 data class Entrypoint(
     val id: String,

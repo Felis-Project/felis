@@ -104,13 +104,11 @@ class MinecraftLauncher : GameLauncher {
                 val versionUrl = manifest.getValue("versions").jsonArray.first {
                     it.jsonObject.getValue("id").jsonPrimitive.content == versionId
                 }.jsonObject.getValue("url").jsonPrimitive.content
-                val iS =
-                    client.send(
-                        HttpRequest.newBuilder(URI.create(versionUrl)).GET().build(),
-                        BodyHandlers.ofInputStream()
-                    )
-                        .body()
-                val version = Json.decodeFromStream<JsonObject>(iS)
+                val iS = client.send(
+                    HttpRequest.newBuilder(URI.create(versionUrl)).GET().build(),
+                    BodyHandlers.ofInputStream()
+                ).body()
+                val version = iS.use { Json.decodeFromStream<JsonObject>(it) }
                 val mappingUrl = version.getValue("downloads").jsonObject
                     .getValue("client_mappings").jsonObject
                     .getValue("url").jsonPrimitive.content

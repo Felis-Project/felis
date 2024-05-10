@@ -1,63 +1,87 @@
 package felis.meta
 
-import felis.transformer.JarContentCollection
+import felis.ModLoader
+import felis.transformer.ContentCollection
 import felis.util.PerfCounter
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.decodeFromString
 import org.slf4j.LoggerFactory
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.*
-import kotlin.streams.asSequence
 
-class ModDiscoverer(modPaths: List<Path>) : Iterable<Mod> {
-    // TODO: Use Delegates.observable to automatically allow transformer to pick up changes
-    private val mods: MutableList<Mod> = mutableListOf()
-    val libs = mutableListOf<JarContentCollection>()
+class ModDiscoverer {
+    companion object {
+        const val MOD_META = "mods.toml"
+    }
+
+    private val internalMods = hashMapOf<Modid, Mod>()
+    private val internalLibs = mutableListOf<ContentCollection>()
     private val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
+    private val perfcounter = PerfCounter()
 
-    init {
-        this.logger.info("mod discovery running for files $modPaths")
-        val perfcounter = PerfCounter()
-        for (nonExistingModDir in modPaths.filter { it.notExists() }.filter { it.extension.isEmpty() }) {
-            nonExistingModDir.createDirectory()
+    // offered to outsiders as API
+    val mods: Iterable<Mod> = this.internalMods.values
+    val libs: Iterable<ContentCollection> = this.internalLibs.asIterable()
+
+    fun registerMod(mod: Mod) {
+        if (mod.modid in this.internalMods) {
+            throw ModDiscoveryError("Mod ${mod.modid} has already been registered")
         }
 
-        // behold the limits of my functional programming ability
-        val (mods, libs) = modPaths
-            .asSequence()
-            .flatMap { Files.walk(it).filter(Path::isRegularFile).asSequence() }
-            .map { JarContentCollection(it) }
-            .fold(Pair(mutableListOf<Mod>(), mutableListOf<JarContentCollection>())) { acc, contentCollection ->
-                val (mods, libs) = acc
-                perfcounter.timed {
-                    Mod.from(contentCollection)
-                        .onSuccess { mods.add(it) }
-                        .onFailure {
-                            when (it) {
-                                is SerializationException -> throw ModMetaException(
-                                    "mod candidate ${contentCollection.path.name} had a malformatted mods.toml file"
-                                ).initCause(it)
+        this.internalMods[mod.modid] = mod
+    }
 
-                                is NotAMod -> libs.add(contentCollection)
+    fun walkScanner(scanner: Scanner) {
+        this.logger.info("mod discovery running for scanner $scanner")
+        scanner.offer { this.perfcounter.timed { this.consider(it) } }
+    }
 
-                                else -> throw ModDiscoveryException(
-                                    "encountered an issue while attempting to discover candidate ${contentCollection.path.name}"
-                                ).initCause(it)
-                            }
-                        }
-                }
-                acc
-            }
+    fun consider(contentCollection: ContentCollection) {
+        val result = createMods(contentCollection)
 
+        if (result is ModDiscoveryResult.Mods) result.mods.forEach(this::registerMod)
+        if (result is ModDiscoveryResult.Error) result.failedMods.forEach(Exception::printStackTrace)
+        if (result is ModDiscoveryResult.NoMods) this.internalLibs.add(contentCollection)
+    }
 
-        this.mods.addAll(mods)
-        this.libs.addAll(libs)
-
-        perfcounter.printSummary { _, total, average ->
-            this.logger.info("discovered ${mods.size} mods in ${total}s. Average discovery time was ${average}ms")
+    fun finish() {
+        this.perfcounter.printSummary { _, total, average ->
+            this.logger.info("discovered ${this.internalMods.size} mods in ${total}s. Average discovery time was ${average}ms")
         }
     }
 
-    fun registerMod(mod: Mod) = this.mods.add(mod)
-    override fun iterator(): Iterator<Mod> = this.mods.iterator()
+    private fun createMods(cc: ContentCollection): ModDiscoveryResult {
+        val urls = cc.getContentUrls(MOD_META)
+        if (urls.isEmpty()) return ModDiscoveryResult.NoMods
+
+        val exceptions = mutableListOf<ModDiscoveryError>()
+        val mods = mutableListOf<Mod>()
+        for (url in urls) {
+            val metaToml = try {
+                String(url.openStream().use { it.readAllBytes() })
+            } catch (e: Exception) {
+                val top = ModDiscoveryError("Problem occured when reading mod candidate : $cc")
+                top.initCause(e)
+                exceptions += top
+                continue
+            }
+
+            try {
+                val meta = ModLoader.toml.decodeFromString<ModMeta>(metaToml)
+                mods += Mod(cc, meta)
+            } catch (e: SerializationException) {
+                val top = ModDiscoveryError("Mod $cc had a malformatted $MOD_META file(at $url)")
+                top.initCause(e)
+                exceptions += top
+            }
+        }
+
+        return if (exceptions.isEmpty()) {
+            ModDiscoveryResult.Success(mods)
+        } else if (mods.isEmpty()) {
+            ModDiscoveryResult.Failure(exceptions)
+        } else {
+            ModDiscoveryResult.PartialMods(mods, exceptions)
+        }
+    }
 }
+
+typealias Modid = String

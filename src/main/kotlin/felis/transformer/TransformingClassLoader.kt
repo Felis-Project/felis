@@ -24,20 +24,9 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
         PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms", wait = true)
     private val classLoadPerfCounter =
         PerfCounter("Loaded {} classes in {}s. Average load time was {}ms", wait = true)
-    private val internal =
-        PerfCounter(wait = true)
     val ignored = IgnoreForTransformations()
 
-    private val contentCollection: ContentCollection by lazy {
-        NestedContentCollection(
-            buildList {
-                add(ModLoader.game)
-                addAll(ModLoader.discoverer)
-                addAll(ModLoader.discoverer.libs)
-            }
-        )
-    }
-
+    @Suppress("MemberVisibilityCanBePrivate")
     fun getClassData(name: String): ClassContainer? {
         val normalName = name.replace(".", "/") + ".class"
         // getResourceAsStream since mixins require system resources as well
@@ -45,7 +34,7 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
     }
 
     override fun getResourceAsStream(name: String): InputStream? =
-        this.contentCollection.openStream(name) ?: getSystemResourceAsStream(name)
+        RootContentCollection.openStream(name) ?: getSystemResourceAsStream(name)
 
     // TODO: On average twice the amount of time in findClass is used by loadClass. Figure out why that is happening
     override fun loadClass(name: String, resolve: Boolean): Class<*> = synchronized(getClassLoadingLock(name)) {
@@ -89,7 +78,7 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
 
             if (bytes != null) {
                 // define class is line amazingly slow. We are talking half our class loading time. So call it only in this rare case
-                return this.internal.timed { this.defineClass(name, bytes, 0, bytes.size) }
+                return this.defineClass(name, bytes, 0, bytes.size)
             }
         }
 
@@ -100,20 +89,21 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
         this.defineClass(container.name, container.bytes, 0, container.bytes.size)
 
     override fun findResource(name: String): URL? {
-        val targetUrl = this.contentCollection.getContentUrl(name)
+        val targetUrl = RootContentCollection.getContentUrl(name)
         if (targetUrl != null) return targetUrl
 
         this.logger.warn("Could not locate resource {}. Here be dragons!!!", name)
-        // if no mod jars had it then it doesn't exist in us
         return null
     }
 
     override fun findResources(name: String): Enumeration<URL> =
-        Collections.enumeration(this.contentCollection.getContentUrls(name))
+        Collections.enumeration(RootContentCollection.getContentUrls(name))
 
     companion object {
         init {
             registerAsParallelCapable()
         }
     }
+
+    override fun toString(): String = "transforming-class-loader"
 }

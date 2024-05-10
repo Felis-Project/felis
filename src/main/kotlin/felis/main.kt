@@ -3,16 +3,13 @@ package felis
 import felis.launcher.GameLauncher
 import felis.launcher.MinecraftLauncher
 import felis.side.Side
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.*
 import java.nio.file.*
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-/**
- * Not meant to be used outside of this file.
- * Parses cli arguments and initializes the loader.
- */
 object FelisLaunchEnvironment {
     sealed class DefaultValue<out T> {
         class Value<out T>(val t: T) : DefaultValue<T>()
@@ -32,7 +29,7 @@ object FelisLaunchEnvironment {
     }
 
     val side: Side by OptionKey("felis.side") { enumValueOf(it) }
-    val mods: List<Path> by OptionKey("felis.mods") { value ->
+    val mods: List<Path> by OptionKey("felis.mods", DefaultValue.Value(emptyList())) { value ->
         value.split(File.pathSeparator).filter { it.isNotEmpty() }.map { Paths.get(it) }
     }
     val launcher: GameLauncher by OptionKey("felis.launcher", DefaultValue.Value(MinecraftLauncher())) {
@@ -45,7 +42,7 @@ object FelisLaunchEnvironment {
         Paths.get(it)
     }
 
-    val logger = LoggerFactory.getLogger(FelisLaunchEnvironment::class.java)
+    val logger: Logger = LoggerFactory.getLogger(FelisLaunchEnvironment::class.java)
 
     override fun toString(): String =
         "Felis launching with options: (side=$side, mods=$mods, launcher=$launcher, printClassPath=$printClassPath, audit=$audit)"
@@ -58,7 +55,7 @@ fun main(args: Array<String>) {
     // print the classpath
     if (FelisLaunchEnvironment.printClassPath) {
         val cp = System.getProperty("java.class.path").split(File.pathSeparator)
-        FelisLaunchEnvironment.logger.info("Printing $cp classpath entries")
+        FelisLaunchEnvironment.logger.info("Printing ${cp.size} classpath entries")
         for (s in cp) {
             FelisLaunchEnvironment.logger.info(s)
         }

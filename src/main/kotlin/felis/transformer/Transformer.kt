@@ -8,7 +8,7 @@ class Transformer : Transformation {
     private val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
 
     // we have to store lazies to allow custom language adapters to work
-    private val external: Map<String, List<Lazy<Transformation.Named>>> = ModLoader.discoverer
+    private val external: Map<String, List<Lazy<Transformation.Named>>> = ModLoader.discoverer.mods
         .flatMap { it.meta.transforms }
         .groupBy { it.target }
         .mapValues { (_, transformations) ->

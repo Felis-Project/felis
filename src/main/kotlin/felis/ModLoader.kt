@@ -6,18 +6,14 @@ import felis.language.KotlinLanguageAdapter
 import felis.language.LanguageAdapter
 import felis.launcher.GameInstance
 import felis.launcher.GameLauncher
-import felis.meta.Mod
-import felis.meta.ModDiscoverer
-import felis.meta.ModMeta
+import felis.meta.*
 import felis.side.Side
 import felis.side.SideStrippingTransformation
 import felis.transformer.*
-import kotlinx.serialization.decodeFromString
 import net.peanuuutz.tomlkt.Toml
 import org.objectweb.asm.Type
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.FileNotFoundException
 import java.io.StringWriter
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
@@ -116,7 +112,11 @@ object ModLoader {
     fun initLoader(mods: List<Path>, side: Side, launcher: GameLauncher, gameArgs: Array<String>, audit: Path?) {
         this.logger.info("starting mod loader")
         this.side = side // the physical side we are running on
-        this.discoverer = ModDiscoverer(mods) // the object used to locate and initialize mods
+        this.discoverer = ModDiscoverer() // the object used to locate and initialize mods
+
+        // run the default scanners
+        this.discoverer.walkScanner(ClasspathScanner) // used primarily by development environments
+        this.discoverer.walkScanner(DirectoryScanner(mods)) // used primarily by users
 
         this.languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
         this.transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
@@ -140,17 +140,6 @@ object ModLoader {
             ignorePackageAbsolute("felis.util")
         }
 
-        // register ourselves as a built-in mod
-        this.discoverer.registerMod(
-            Mod(
-                EmptyContentCollection,
-                classLoader.getResourceAsStream("loader.toml")
-                    ?.use { String(it.readAllBytes()) }
-                    ?.let { toml.decodeFromString<ModMeta>(it) }
-                    ?: throw FileNotFoundException("File loader.toml was not found")
-            )
-        )
-
         // register out language adapters
         this.languageAdapter.apply {
             registerAdapter(KotlinLanguageAdapter)
@@ -165,6 +154,9 @@ object ModLoader {
         // call all loader plugin entrypoints after we set ourselves up
         this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
         // TODO: Lock languageAdapter transformer and discoverer registration methods after the entrypoint has been called
+
+        // the discoverer is done, since after plugins no one else can register scanners or mods
+        this.discoverer.finish()
 
         if (audit == null) {
             // start the game using the main class from above
@@ -197,9 +189,9 @@ object ModLoader {
         // TODO: Perhaps make this prettier in the future
         val sw = StringWriter()
         sw.append("mods currently running: ")
-        this.discoverer.forEach {
+        this.discoverer.mods.forEach {
             sw.appendLine()
-            sw.append("- ${it.meta.modid}: ${it.meta.version}")
+            sw.append("- ${it.modid}: ${it.meta.version}")
         }
         this.logger.info(sw.toString())
 
@@ -276,7 +268,7 @@ object ModLoader {
      */
     @Suppress("MemberVisibilityCanBePrivate")
     inline fun <reified T, reified R> callEntrypoint(id: String, crossinline method: (T) -> R): List<R> =
-        this.discoverer
+        this.discoverer.mods
             .asSequence()
             .flatMap { it.meta.entrypoints }
             .filter { it.id == id }
