@@ -11,7 +11,7 @@ object JavaLanguageAdapter : LanguageAdapter {
         Class.forName(specifier, true, ModLoader.classLoader).let {
             clazz.cast(it.getDeclaredConstructor().newInstance())
         }
-    }
+    }.onFailure { LanguageAdapterException(specifier).initCause(it) }
 }
 
 object KotlinLanguageAdapter : LanguageAdapter {

@@ -125,7 +125,6 @@ object ModLoader {
             ignorePackage("org.slf4j")
             ignorePackage("org.lwjgl")
             ignorePackageAbsolute("felis")
-            ignorePackage("felis.api")
             ignorePackageAbsolute("felis.meta")
             ignorePackageAbsolute("felis.side")
             ignorePackageAbsolute("felis.transformer")
@@ -184,13 +183,13 @@ object ModLoader {
         sw.append("mods currently running: ")
         this.discoverer.mods.forEach {
             sw.appendLine()
-            sw.append("- ${it.modid}: ${it.meta.version}")
+            sw.append("- ${it.modid}: ${it.metadata.version}")
         }
         this.logger.info(sw.toString())
 
         val mainClass = classLoader.loadClass(owner)
         // using MethodLookup because technically speaking it's better that reflection
-        val mainMethod = MethodHandles.lookup().findStatic(
+        val mainMethod = MethodHandles.publicLookup().`in`(mainClass).findStatic(
             mainClass,
             method,
             MethodType.fromMethodDescriptorString(desc, null)
@@ -198,7 +197,7 @@ object ModLoader {
 
         this.logger.debug("Calling $owner#main")
         // finally call the method
-        mainMethod.invokeExact(params)
+        mainMethod.invoke(params)
     }
 
     /**
@@ -248,9 +247,9 @@ object ModLoader {
     /**
      * Call the entrypoint specified by the given id.
      * Entrypoint IDs don't need to be specifically registered.
-     * Entrypoints need to be registered in the [ModMeta.entrypoints] list.
+     * Entrypoints need to be registered in the [ModMetadataSchemaV1.entrypoints] list.
      *
-     * @see ModMeta for the mod metadata schema
+     * @see ModMetadataSchemaV1 for the mod metadata schema
      *
      * @param T the type of the entrypoint
      * @param R the return type of the entrypoint method call
@@ -263,9 +262,9 @@ object ModLoader {
     inline fun <reified T, reified R> callEntrypoint(id: String, crossinline method: (T) -> R): List<R> =
         this.discoverer.mods
             .asSequence()
-            .flatMap { it.meta.entrypoints }
+            .flatMap { it.entrypoints }
             .filter { it.id == id }
-            .map { this.languageAdapter.createInstance(it.path, T::class.java).getOrThrow() }
+            .map { this.languageAdapter.createInstance(it.specifier, T::class.java).getOrThrow() }
             .map { method(it) }
             .toList()
 }

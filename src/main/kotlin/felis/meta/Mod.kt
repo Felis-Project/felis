@@ -2,7 +2,7 @@ package felis.meta
 
 import felis.transformer.ContentCollection
 
-open class Mod(private val contentCollection: ContentCollection, val meta: ModMeta) :
-    ContentCollection by contentCollection {
-    val modid by this.meta::modid
-}
+open class Mod(
+    private val contentCollection: ContentCollection,
+    val metadata: ModMetadataExtended
+) : ContentCollection by contentCollection, ModMetadataSchemaV1 by metadata

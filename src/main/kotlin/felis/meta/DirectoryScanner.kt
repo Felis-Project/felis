@@ -13,7 +13,6 @@ data class DirectoryScanner(private val paths: Iterable<Path>) : Scanner {
             modCandidate.walk()
                 .map(::JarContentCollection)
                 .forEach { accept(it) }
-            continue
         }
     }
 }

@@ -1,12 +1,13 @@
+schema = 1
 name = "Testmod"
 modid = "testmod"
 version = "${version}"
 
-[[transforms]]
+[[transformations]]
 name = "test transform"
-target = "net.minecraft.client.main.Main"
-path = "io.github.testmod.MainTransformation"
+targets = ["net.minecraft.client.main.Main"]
+specifier = "io.github.testmod.MainTransformation"
 
 [[entrypoints]]
 id = "loader_plugin"
-path = "io.github.testmod.TestLoaderPlugin"
+specifier = "io.github.testmod.TestLoaderPlugin"
