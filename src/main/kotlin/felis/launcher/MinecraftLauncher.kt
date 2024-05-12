@@ -1,13 +1,13 @@
 package felis.launcher
 
-import felis.FelisLaunchEnvironment
 import felis.ModLoader
-import felis.meta.ModMeta
+import felis.meta.ModMetadata
 import felis.side.Side
 import felis.transformer.JarContentCollection
 import felis.util.PerfCounter
 import io.github.joemama.atr.JarRemapper
 import io.github.joemama.atr.ProguardMappings
+import io.github.z4kn4fein.semver.Version
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
@@ -20,24 +20,13 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.io.path.createParentDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.isDirectory
-import kotlin.io.path.readText
+import kotlin.io.path.*
 
 
-class MinecraftLauncher : GameLauncher {
+class MinecraftLauncher : GameLauncher, OptionScope {
     private val logger = LoggerFactory.getLogger(MinecraftLauncher::class.java)
-    private val remap: Boolean by FelisLaunchEnvironment.OptionKey(
-        "felis.minecraft.remap",
-        FelisLaunchEnvironment.DefaultValue.Value(false),
-        String::toBooleanStrict
-    )
-    private val cachePath: Path by FelisLaunchEnvironment.OptionKey(
-        "felis.minecraft.cache",
-        FelisLaunchEnvironment.DefaultValue.Value(Paths.get(".felis")),
-        Paths::get
-    )
+    private val remap: Boolean by option("felis.minecraft.remap", default(false), String::toBooleanStrict)
+    private val cachePath: Path by option("felis.minecraft.cache", default(Paths.get(".felis")), Paths::get)
 
     override fun instantiate(args: Array<String>): GameInstance {
         val cp = System.getProperty("java.class.path").split(File.pathSeparator).map { Paths.get(it) }
@@ -62,7 +51,9 @@ class MinecraftLauncher : GameLauncher {
 
                     return GameInstance(
                         JarContentCollection(minecraftJar),
-                        ModMeta(name = "Minecraft", modid = "minecraft", version = versionId),
+                        ModMetadata(
+                            schema = 1, name = "Minecraft", modid = "minecraft", version = Version.parse("1.2.0")
+                        ).extended(),
                         mainClass,
                         args
                     )
@@ -104,13 +95,11 @@ class MinecraftLauncher : GameLauncher {
                 val versionUrl = manifest.getValue("versions").jsonArray.first {
                     it.jsonObject.getValue("id").jsonPrimitive.content == versionId
                 }.jsonObject.getValue("url").jsonPrimitive.content
-                val iS =
-                    client.send(
-                        HttpRequest.newBuilder(URI.create(versionUrl)).GET().build(),
-                        BodyHandlers.ofInputStream()
-                    )
-                        .body()
-                val version = Json.decodeFromStream<JsonObject>(iS)
+                val iS = client.send(
+                    HttpRequest.newBuilder(URI.create(versionUrl)).GET().build(),
+                    BodyHandlers.ofInputStream()
+                ).body()
+                val version = iS.use { Json.decodeFromStream<JsonObject>(it) }
                 val mappingUrl = version.getValue("downloads").jsonObject
                     .getValue("client_mappings").jsonObject
                     .getValue("url").jsonPrimitive.content

@@ -1,3 +1,4 @@
+schema = 1
 name = "Felis Loader"
 modid = "felis"
 version = "${version}"

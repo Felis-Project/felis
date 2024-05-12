@@ -1,5 +1,5 @@
 [versions]
-felis-dam = "1.9.0-alpha"
+felis-dam = "1.9.2-alpha"
 asm = "9.7"
 tomlkt = "0.3.7"
 kotlin-coroutines = "1.8.0"

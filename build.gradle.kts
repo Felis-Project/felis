@@ -1,11 +1,4 @@
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
-
-buildscript {
-    dependencies {
-        classpath("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-    }
-}
+val felisRepo = "https://repsy.io/mvn/0xjoemama/public/"
 
 plugins {
     alias(libs.plugins.kotlin)
@@ -20,12 +13,12 @@ repositories {
     mavenCentral()
     maven {
         name = "Felis Repo"
-        url = uri("https://repsy.io/mvn/0xjoemama/public/")
+        url = uri(felisRepo)
     }
 }
 
 group = "felis"
-version = "1.4.0-alpha"
+version = "1.5.0-alpha"
 
 dependencies {
     api(libs.bundles.asm)
@@ -33,8 +26,10 @@ dependencies {
     api(libs.kotlin.coroutines)
     api(kotlin("reflect"))
     implementation(libs.slf4j)
+    // TODO: (chore) move dependencies in libs.versions.toml
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("io.github.joemama:actually-tiny-remapper:1.1.0-alpha")
+    api("io.github.z4kn4fein:semver-jvm:2.0.0")
 }
 
 tasks.processResources {
@@ -75,7 +70,7 @@ publishing {
     repositories {
         maven {
             name = "Repsy"
-            url = uri("https://repo.repsy.io/mvn/0xjoemama/public")
+            url = uri(felisRepo)
             credentials {
                 username = System.getenv("REPSY_USERNAME")
                 password = System.getenv("REPSY_PASSWORD")
@@ -86,7 +81,10 @@ publishing {
 
 tasks.register("launcherJson", LauncherJsonTask::class.java) {
     gameVersion.set("1.20.6")
-    repoMap.put(
-        "io.github.joemama:actually-tiny-remapper:1.1.0-alpha", "https://repo.repsy.io/mvn/0xjoemama/public/"
-    )
+    repoMap.put("io.github.joemama:actually-tiny-remapper:1.1.0-alpha", felisRepo)
+    ignore.add("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.0")
+    ignore.add("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
+    ignore.add("org.jetbrains:annotations:23.0.0")
+    ignore.add("org.jetbrains:annotations:13.0")
+    additional.put("felis:felis:${version}", felisRepo)
 }

@@ -1,18 +1,14 @@
 package felis.transformer
 
+import felis.ModLoader
 import java.io.InputStream
 import java.net.URL
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.div
 import kotlin.io.path.exists
-
-class NestedContentCollection(private val children: Iterable<ContentCollection>) : ContentCollection {
-    override fun getContentUrl(name: String): URL? = this.children.firstNotNullOfOrNull { it.getContentUrl(name) }
-    override fun getContentPath(path: String): Path? = this.children.firstNotNullOfOrNull { it.getContentPath(path) }
-    override fun openStream(name: String): InputStream? = this.children.firstNotNullOfOrNull { it.openStream(name) }
-    override fun getContentUrls(name: String): Collection<URL> = this.children.flatMap { it.getContentUrls(name) }
-}
+import kotlin.io.path.inputStream
 
 data class JarContentCollection(val path: Path) : ContentCollection {
     private val fs = FileSystems.newFileSystem(this.path)
@@ -33,9 +29,43 @@ data class JarContentCollection(val path: Path) : ContentCollection {
         this.getContentUrl(name)?.let { listOf(it) } ?: emptyList()
 }
 
-data object EmptyContentCollection : ContentCollection {
-    override fun getContentUrl(name: String): URL? = null
-    override fun getContentPath(path: String): Path? = null
-    override fun openStream(name: String): InputStream? = null
-    override fun getContentUrls(name: String): Collection<URL> = emptyList()
+data class PathUnionContentCollection(val paths: List<Path>) : ContentCollection {
+    override fun getContentUrl(name: String): URL? = this.paths.firstNotNullOfOrNull {
+        val out = it / name
+        if (out.exists()) out.toUri().toURL() else null
+    }
+
+    override fun getContentPath(path: String): Path? = this.paths.firstNotNullOfOrNull {
+        val out = it / path
+        if (out.exists()) out else null
+    }
+
+    override fun openStream(name: String): InputStream? = this.getContentPath(name)?.inputStream()
+
+    override fun getContentUrls(name: String): Collection<URL> = this.paths
+        .asSequence()
+        .map { it / name }
+        .filter { it.exists() }
+        .map { it.toUri().toURL() }
+        .toCollection(mutableListOf())
+}
+
+/**
+ * Load content through a ContentCollection
+ * Priority is: mods -> game -> libs
+ */
+data object RootContentCollection : ContentCollection {
+    override fun getContentUrl(name: String): URL? = this.findPrioritized { it.getContentUrl(name) }
+    override fun getContentPath(path: String): Path? = this.findPrioritized { it.getContentPath(path) }
+    override fun openStream(name: String): InputStream? = this.findPrioritized { it.openStream(name) }
+    override fun getContentUrls(name: String): Collection<URL> = buildList {
+        addAll(ModLoader.discoverer.mods.flatMap { it.getContentUrls(name) })
+        addAll(ModLoader.game.getContentUrls(name))
+        addAll(ModLoader.discoverer.libs.flatMap { it.getContentUrls(name) })
+    }
+
+    private inline fun <T> findPrioritized(getter: (ContentCollection) -> T?) =
+        ModLoader.discoverer.mods.firstNotNullOfOrNull(getter)
+            ?: getter(ModLoader.game)
+            ?: ModLoader.discoverer.libs.firstNotNullOfOrNull { getter(it) }
 }

@@ -1,10 +1,15 @@
 {
+  "id": "1.20.6-Felis",
   "inheritsFrom": "1.20.6",
   "type": "release",
   "libraries": [
     {
       "name": "io.github.joemama:actually-tiny-remapper:1.1.0-alpha",
-      "url": "https://repo.repsy.io/mvn/0xjoemama/public/"
+      "url": "https://repsy.io/mvn/0xjoemama/public/"
+    },
+    {
+      "name": "io.github.z4kn4fein:semver-jvm:2.0.0",
+      "url": "https://repo.maven.apache.org/maven2/"
     },
     {
       "name": "net.peanuuutz.tomlkt:tomlkt-jvm:0.3.7",
@@ -12,14 +17,6 @@
     },
     {
       "name": "org.jetbrains.kotlin:kotlin-reflect:1.9.23",
-      "url": "https://repo.maven.apache.org/maven2/"
-    },
-    {
-      "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.0",
-      "url": "https://repo.maven.apache.org/maven2/"
-    },
-    {
-      "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0",
       "url": "https://repo.maven.apache.org/maven2/"
     },
     {
@@ -36,10 +33,6 @@
     },
     {
       "name": "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3",
-      "url": "https://repo.maven.apache.org/maven2/"
-    },
-    {
-      "name": "org.jetbrains:annotations:23.0.0",
       "url": "https://repo.maven.apache.org/maven2/"
     },
     {
@@ -65,6 +58,10 @@
     {
       "name": "org.slf4j:slf4j-api:2.0.9",
       "url": "https://repo.maven.apache.org/maven2/"
+    },
+    {
+      "name": "felis:felis:1.5.0-alpha",
+      "url": "https://repsy.io/mvn/0xjoemama/public/"
     }
   ],
   "mainClass": "felis.MainKt",

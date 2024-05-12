@@ -1,12 +1,12 @@
 package felis.launcher
 
 import felis.meta.Mod
-import felis.meta.ModMeta
+import felis.meta.ModMetadataExtended
 import felis.transformer.JarContentCollection
 
 class GameInstance(
     contentCollection: JarContentCollection,
-    meta: ModMeta,
+    meta: ModMetadataExtended,
     val mainClass: String,
     val args: Array<String>
 ) : Mod(contentCollection, meta) {
