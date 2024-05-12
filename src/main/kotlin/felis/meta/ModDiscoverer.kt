@@ -15,7 +15,7 @@ typealias Modid = String
 
 class ModDiscoverer {
     companion object {
-        const val MOD_META = "mods.toml"
+        const val MOD_META = "felis.mod.toml"
         val toml = Toml {
             ignoreUnknownKeys = true
             explicitNulls = false

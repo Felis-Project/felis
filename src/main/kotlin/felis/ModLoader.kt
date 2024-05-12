@@ -134,7 +134,7 @@ object ModLoader {
             ignorePackageAbsolute("felis.util")
         }
 
-        // register out language adapters
+        // register our language adapters
         this.languageAdapter.apply {
             registerAdapter(KotlinLanguageAdapter)
             registerAdapter(JavaLanguageAdapter)

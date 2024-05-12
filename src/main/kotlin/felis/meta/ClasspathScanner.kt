@@ -14,6 +14,7 @@ data object ClasspathScanner : Scanner {
         val directoryPaths = mutableListOf<Path>()
         for (entry in System.getProperty("java.class.path").split(File.pathSeparator)) {
             val root = Paths.get(entry)
+
             if (root.isDirectory()) {
                 directoryPaths.add(root)
                 continue

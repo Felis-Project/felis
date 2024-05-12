@@ -4,6 +4,7 @@ import felis.launcher.FelisLaunchEnvironment
 import java.io.File
 
 fun main(args: Array<String>) {
+    // print out information related to this launch
     FelisLaunchEnvironment.let { env ->
         env.logger.info("Felis running on ${System.getProperty("java.vendor")}: ${System.getProperty("java.version")} using arguments: ${args.contentToString()}")
         env.logger.info("Felis environment: mods=${env.mods}, side=${env.side}, launcher=${env.launcher}, print=${env.printClassPath}, audit=${env.audit}")

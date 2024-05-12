@@ -1,7 +1,7 @@
 schema = 1
 name = "Testmod"
 modid = "testmod"
-version = "${version}"
+version = "1.0.0"
 
 [[transformations]]
 name = "test transform"
@@ -11,3 +11,13 @@ specifier = "io.github.testmod.MainTransformation"
 [[entrypoints]]
 id = "loader_plugin"
 specifier = "io.github.testmod.TestLoaderPlugin"
+
+[[dependencies.requires]]
+type = "mod"
+modid = "felis"
+version = ">=1.5.0"
+
+[[dependencies.requires]]
+type = "mod"
+modid = "minecraft"
+version = "1.20.x"

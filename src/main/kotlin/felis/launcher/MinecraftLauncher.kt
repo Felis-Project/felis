@@ -20,10 +20,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.io.path.createParentDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.isDirectory
-import kotlin.io.path.readText
+import kotlin.io.path.*
 
 
 class MinecraftLauncher : GameLauncher, OptionScope {

@@ -7,7 +7,7 @@ import java.nio.file.Path
  * Mod Metadata schema, version 1
  */
 interface ModMetadataSchemaV1 {
-    val schema: Int // The schema version for this mods.toml file, any file that does not have it, it considered invalid
+    val schema: Int // The schema version for this felis.mod.toml file, any file that does not have it, it considered invalid
     val modid: String
     val name: String
     val version: Version
@@ -18,5 +18,5 @@ interface ModMetadataSchemaV1 {
     val people: Map<String, List<PersonMetadata>>
     val entrypoints: List<EntrypointMetadata>
     val transformations: List<TransformationMetadata>
-    val dependencies: List<DependencyMetadata>
+    val dependencies: DependencyMetadata?
 }

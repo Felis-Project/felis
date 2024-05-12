@@ -3,6 +3,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -18,6 +19,12 @@ abstract class LauncherJsonTask : DefaultTask() {
 
     @get:Input
     abstract val repoMap: MapProperty<String, String>
+
+    @get:Input
+    abstract val ignore: ListProperty<String>
+
+    @get:Input
+    abstract val additional: MapProperty<String, String>
 
     @Serializable
     data class VersionJson(
@@ -42,12 +49,14 @@ abstract class LauncherJsonTask : DefaultTask() {
             project.configurations.getByName("runtimeClasspath").resolvedConfiguration.lenientConfiguration.allModuleDependencies.mapNotNull {
                 if (it.moduleArtifacts.isNotEmpty()) {
                     val lib = "${it.moduleGroup}:${it.moduleName}:${it.moduleVersion}"
-                    Library(
-                        lib,
-                        this.repoMap.getting(lib).getOrElse("https://repo.maven.apache.org/maven2/")
-                    )
+                    if (lib !in this.ignore.get()) {
+                        Library(
+                            lib,
+                            this.repoMap.getting(lib).getOrElse("https://repo.maven.apache.org/maven2/")
+                        )
+                    } else null
                 } else null
-            }.sortedBy { it.name }
+            }.sortedBy { it.name } + this.additional.get().map { (lib, repo) -> Library(lib, repo) }
 
         val version = VersionJson(
             id = this.gameVersion.get() + "-Felis",
