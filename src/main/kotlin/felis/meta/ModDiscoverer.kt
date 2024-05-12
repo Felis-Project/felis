@@ -64,6 +64,11 @@ class ModDiscoverer {
     }
 
     private fun createMods(cc: ContentCollection): ModDiscoveryResult {
+        if (cc.getContentUrl("mods.toml") != null) {
+            this.logger.warn("Checked mod $cc contained a mods.toml file that is assumed to use the old metadata schema. Considering it a library.")
+            this.logger.warn("To fix this, please change it's name to felis.mod.toml and use schema version 1")
+            return ModDiscoveryResult.NoMods
+        }
         val urls = cc.getContentUrls(MOD_META)
         if (urls.isEmpty()) return ModDiscoveryResult.NoMods
 
