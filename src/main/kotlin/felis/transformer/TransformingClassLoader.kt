@@ -9,10 +9,12 @@ import java.net.URL
 import java.util.*
 
 /**
- * This class loader uses the classloading delegation model to:
- * 1. Use the classpath for loader/minecraft dependencies
- * 2. Load the contents of mods and the game itself through their jars at runtime
- * 3. Apply transformations to game classes
+ * This class loader misuses the classloading delegation model to:
+ * 1. Load mod classes
+ * 2. Load game classes
+ * 3. Load library classes
+ * The normal java classpath isn't used for anything other that ignored packages/classes.
+ * You can ignore a class or package using [IgnoreForTransformations]
  *
  * @author 0xJoeMama
  */
@@ -53,8 +55,8 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
                             c = this.findSystemClass(name)
                             if (c == null) throw ClassNotFoundException("Couldn't find class $name")
                         }
-                        c
-                    } else c
+                    }
+                    c
                 }
             }
 

@@ -86,8 +86,9 @@ class ModDiscoverer {
 
             try {
                 val metaToml = toml.parseToTomlTable(tomlString)
-                require(metaToml.getIntegerOrNull("schema") == 1L) {
-                    "Must specify a schema version. Available versions are: 1"
+                if (metaToml.getIntegerOrNull("schema") != 1L) {
+                    exceptions += ModDiscoveryError("$url, must specify a valid schema version. Available versions are: 1")
+                    continue
                 }
                 val metadata = toml.decodeFromString<ModMetadataExtended>(tomlString)
                 mods += Mod(cc, metadata)

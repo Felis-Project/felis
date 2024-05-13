@@ -4,6 +4,7 @@ import felis.LoaderPluginEntrypoint
 import felis.ModLoader
 import felis.transformer.ClassContainer
 import felis.transformer.ClassRef
+import felis.transformer.ContentCollection
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
@@ -11,12 +12,23 @@ import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.slf4j.LoggerFactory
+import java.io.InputStream
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
+import java.net.URL
+import java.nio.file.Path
 
 object TestLoaderPlugin : LoaderPluginEntrypoint {
     private val logger = LoggerFactory.getLogger(TestLoaderPlugin::class.java)
     override fun onLoaderInit() {
+        ModLoader.discoverer.walkScanner { accept ->
+            accept(object : ContentCollection {
+                override fun getContentUrl(name: String): URL? = null
+                override fun getContentPath(path: String): Path? = null
+                override fun openStream(name: String): InputStream? = null
+                override fun getContentUrls(name: String): Collection<URL> = emptyList()
+            })
+        }
         ModLoader.classLoader.defineClass(ClassContainer("test.class.Class", ClassNode().also {
             it.name = "test/class/Class"
             it.access = Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL

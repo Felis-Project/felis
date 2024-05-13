@@ -6,6 +6,7 @@ import felis.transformer.PathUnionContentCollection
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
 
@@ -15,6 +16,7 @@ data object ClasspathScanner : Scanner {
         for (entry in System.getProperty("java.class.path").split(File.pathSeparator)) {
             val root = Paths.get(entry)
 
+            if (!root.exists()) continue
             if (root.isDirectory()) {
                 directoryPaths.add(root)
                 continue

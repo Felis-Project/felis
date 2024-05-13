@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
         side = FelisLaunchEnvironment.side,
         launcher = FelisLaunchEnvironment.launcher,
         mods = FelisLaunchEnvironment.mods,
-        gameArgs = args,
         audit = FelisLaunchEnvironment.audit,
+        gameArgs = args,
     )
 }

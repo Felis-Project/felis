@@ -36,7 +36,7 @@ class MinecraftLauncher : GameLauncher, OptionScope {
         }
         val mainClassFile = mainClass.replace(".", "/") + ".class"
         for (cpEntry in cp) {
-            if (cpEntry.isDirectory()) continue
+            if (!cpEntry.exists() || cpEntry.isDirectory()) continue
             FileSystems.newFileSystem(cpEntry).use { cpJar ->
                 if (cpJar.getPath(mainClassFile).exists()) {
                     val version = Files.readString(cpJar.getPath("version.json")).let {
