@@ -52,7 +52,7 @@ class MinecraftLauncher : GameLauncher, OptionScope {
                     return GameInstance(
                         JarContentCollection(minecraftJar),
                         ModMetadata(
-                            schema = 1, name = "Minecraft", modid = "minecraft", version = Version.parse("1.2.0")
+                            schema = 1, name = "Minecraft", modid = "minecraft", version = Version.parse(versionId)
                         ).extended(),
                         mainClass,
                         args

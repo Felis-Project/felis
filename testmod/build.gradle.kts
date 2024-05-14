@@ -12,9 +12,3 @@ loaderMake {
 dependencies {
     implementation(project(":"))
 }
-
-tasks.processResources {
-    filesMatching("mods.toml") {
-        expand("version" to version)
-    }
-}
