@@ -79,8 +79,9 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
             }
 
             if (bytes != null) {
-                // define class is line amazingly slow. We are talking half our class loading time. So call it only in this rare case
-                return this.defineClass(name, bytes, 0, bytes.size)
+                // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
+                // TODO: Setup CodeSource/ProtectionDomain
+                return this.defineClass(name, bytes, 0, bytes.size, null)
             }
         }
 

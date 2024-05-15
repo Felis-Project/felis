@@ -18,7 +18,7 @@ repositories {
 }
 
 group = "felis"
-version = "1.5.1-alpha"
+version = "1.5.2-alpha"
 
 dependencies {
     api(libs.bundles.asm)

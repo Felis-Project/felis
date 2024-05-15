@@ -10,6 +10,7 @@ class Transformer : Transformation {
 
     // we have to store lazies to allow custom language adapters to work
     private val external: Map<String, List<Lazy<Transformation.Named>>> = createExternal()
+    val ignored: IgnoreForTransformations = IgnoreForTransformations()
     private val internal = mutableListOf<Transformation>()
 
     fun registerTransformation(t: Transformation) {
@@ -18,6 +19,8 @@ class Transformer : Transformation {
 
     override fun transform(container: ClassContainer) {
         val name = container.name
+        if (this.ignored.isIgnored(name)) return
+
         if (this.external.containsKey(name)) {
             for (t in this.external.getOrDefault(name, emptyList())) {
                 this.logger.info("transforming $name with ${t.value.name}")
