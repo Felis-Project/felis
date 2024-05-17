@@ -14,7 +14,7 @@ import java.util.*
  * 2. Load game classes
  * 3. Load library classes
  * The normal java classpath isn't used for anything other that ignored packages/classes.
- * You can ignore a class or package using [IgnoreForTransformations]
+ * You can ignore a class or package using [IgnoreList]
  *
  * @author 0xJoeMama
  */
@@ -26,7 +26,7 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
         PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms", wait = true)
     private val classLoadPerfCounter =
         PerfCounter("Loaded {} classes in {}s. Average load time was {}ms", wait = true)
-    val ignored = IgnoreForTransformations()
+    val ignored = IgnoreList()
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun getClassData(name: String): ClassContainer? {

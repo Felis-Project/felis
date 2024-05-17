@@ -1,6 +1,6 @@
 package felis.transformer
 
-class IgnoreForTransformations {
+class IgnoreList {
     private val packages: MutableList<Package> = mutableListOf()
     private val classes: MutableList<String> = mutableListOf()
 
@@ -17,12 +17,12 @@ class IgnoreForTransformations {
 
     fun isIgnored(name: String): Boolean = this.packages.any { it.matches(name) } || name in classes
 
-    fun ignorePackage(packageName: String): IgnoreForTransformations {
+    fun ignorePackage(packageName: String): IgnoreList {
         this.packages.add(Package("$packageName.", false))
         return this
     }
 
-    fun ignorePackageAbsolute(packageName: String): IgnoreForTransformations {
+    fun ignorePackageAbsolute(packageName: String): IgnoreList {
         this.packages.add(Package("$packageName.", true))
         return this
     }

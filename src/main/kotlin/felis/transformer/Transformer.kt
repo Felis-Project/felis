@@ -10,7 +10,7 @@ class Transformer : Transformation {
 
     // we have to store lazies to allow custom language adapters to work
     private val external: Map<String, List<Lazy<Transformation.Named>>> = createExternal()
-    val ignored: IgnoreForTransformations = IgnoreForTransformations()
+    val ignored: IgnoreList = IgnoreList()
     private val internal = mutableListOf<Transformation>()
 
     fun registerTransformation(t: Transformation) {
