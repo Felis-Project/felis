@@ -13,3 +13,5 @@ run
 # mc run dir
 */run/
 */logs/
+
+.profileconfig.json

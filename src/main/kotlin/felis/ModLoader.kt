@@ -30,8 +30,7 @@ import kotlin.io.path.pathString
  * @author 0xJoeMama
  */
 // TODO/Missing Features for initial release
-// 1. Useful mod metadata entries
-// 2. Decouple loader internal to remove global variable usage within the loader itself
+// 2. Decouple loader internal to remove global variable usage within the loader itself(in progress)
 // 3. JarInJar
 @Suppress("MemberVisibilityCanBePrivate")
 object ModLoader {
@@ -102,6 +101,7 @@ object ModLoader {
      * @param mods a list of all jars this loader will attempt to load as mods. See [ModDiscoverer] for more info on how mods are loaded
      * @param launcher the launcher for the game this loader is running
      * @param side the **physical** side the loader is running on
+     * @param audit the path to output audited classes or null if we are not auditing
      */
     fun initLoader(mods: List<Path>, side: Side, launcher: GameLauncher, gameArgs: Array<String>, audit: Path?) {
         this.logger.info("starting mod loader")
@@ -113,10 +113,12 @@ object ModLoader {
         this.discoverer.walkScanner(DirectoryScanner(mods)) // used primarily by users
 
         this.languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
-        this.transformer = Transformer() // tool that transforms classes passed into it using registered Transformations
-        this.game = launcher.instantiate(gameArgs) // create the instance of the game
+        this.game = launcher.instantiate(this.side, gameArgs) // create the instance of the game
         this.discoverer.registerMod(this.game) // register the game
-        this.classLoader = TransformingClassLoader()  // the class loader that uses everything in here to work
+        // tool that transforms classes passed into it using registered Transformations
+        this.transformer = Transformer(this.discoverer, this.languageAdapter)
+        // the class loader that uses everything in here to work
+        this.classLoader = TransformingClassLoader(this.transformer, RootContentCollection)
         this.classLoader.ignored.apply {
             ignorePackage("kotlin")
             ignorePackage("kotlinx")
@@ -128,7 +130,6 @@ object ModLoader {
             ignorePackageAbsolute("felis.meta")
             ignorePackageAbsolute("felis.side")
             ignorePackageAbsolute("felis.transformer")
-            ignorePackageAbsolute("felis.asm")
             ignorePackageAbsolute("felis.launcher")
             ignorePackageAbsolute("felis.language")
             ignorePackageAbsolute("felis.util")
@@ -216,7 +217,7 @@ object ModLoader {
                     if (file.extension == "class") {
                         val name = file.pathString.substring(1).replace("/", ".").removeSuffix(".class")
                         val oldBytes = Files.newInputStream(file).use { it.readBytes() }
-                        val container = ClassContainer(name, oldBytes)
+                        val container = ClassContainer(oldBytes, name)
                         this.transformer.transform(container)
 
                         if (container.skip) continue
@@ -229,7 +230,7 @@ object ModLoader {
                             output,
                             StandardOpenOption.CREATE,
                             StandardOpenOption.WRITE
-                        ).use { it.write(container.bytes) }
+                        ).use { it.write(container.modifiedBytes()) }
                     } else if (!file.isDirectory()) {
                         val output = outputJar.getPath("/").resolve(file.pathString)
                         output.createParentDirectories()
@@ -256,7 +257,7 @@ object ModLoader {
      * @param id the id of the entrypoint
      * @param method the method to run on objects of the [T] type
      *
-     * @return a list of the result of calling all the entrypoints
+     * @return a list with the results of calling all the entrypoints
      */
     @Suppress("MemberVisibilityCanBePrivate")
     inline fun <reified T, reified R> callEntrypoint(id: String, crossinline method: (T) -> R): List<R> =

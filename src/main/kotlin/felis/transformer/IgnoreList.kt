@@ -7,8 +7,7 @@ class IgnoreList {
     data class Package(val name: String, val absolute: Boolean) {
         fun matches(name: String): Boolean {
             return if (this.absolute) {
-                val innerPackage = name.lastIndexOf('.')
-                name.substring(0..innerPackage) == this.name
+                name.substringBeforeLast('.') == this.name
             } else {
                 name.startsWith(this.name)
             }
@@ -18,12 +17,12 @@ class IgnoreList {
     fun isIgnored(name: String): Boolean = this.packages.any { it.matches(name) } || name in classes
 
     fun ignorePackage(packageName: String): IgnoreList {
-        this.packages.add(Package("$packageName.", false))
+        this.packages.add(Package(packageName, false))
         return this
     }
 
     fun ignorePackageAbsolute(packageName: String): IgnoreList {
-        this.packages.add(Package("$packageName.", true))
+        this.packages.add(Package(packageName, true))
         return this
     }
 

@@ -3,8 +3,8 @@ package io.github.testmod
 import felis.LoaderPluginEntrypoint
 import felis.ModLoader
 import felis.transformer.ClassContainer
-import felis.transformer.ClassRef
 import felis.transformer.ContentCollection
+import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
@@ -29,23 +29,28 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
                 override fun getContentUrls(name: String): Collection<URL> = emptyList()
             })
         }
-        ModLoader.classLoader.defineClass(ClassContainer("test.class.Class", ClassNode().also {
-            it.name = "test/class/Class"
-            it.access = Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL
-            it.superName = Type.getInternalName(Any::class.java)
-            it.interfaces = listOf()
-            it.version = Opcodes.V21
+        val node = ClassNode().apply {
+            name = "test/class/Class"
+            access = Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL
+            superName = Type.getInternalName(Any::class.java)
+            interfaces = listOf()
+            version = Opcodes.V21
 
-            it.methods.add(MethodNode().also {
-                it.name = "test"
-                it.desc = Type.getMethodDescriptor(Type.VOID_TYPE)
-                it.access = Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC
+            methods.add(MethodNode().apply {
+                name = "test"
+                desc = Type.getMethodDescriptor(Type.VOID_TYPE)
+                access = Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC
 
-                it.instructions.add(InsnList().also {
-                    it.add(InsnNode(Opcodes.RETURN))
+                instructions.add(InsnList().apply {
+                    add(InsnNode(Opcodes.RETURN))
                 })
             })
-        }.let { ClassRef.NodeRef(it) }))
+        }
+        val bytes = with(ClassWriter(ClassWriter.COMPUTE_FRAMES)) {
+            node.accept(this)
+            toByteArray()
+        }
+        ModLoader.classLoader.defineClass(ClassContainer(bytes, "test.class.Class"))
         val cls = Class.forName("test.class.Class")
         val invoker = MethodHandles.publicLookup().findStatic(cls, "test", MethodType.methodType(Void.TYPE))
         invoker.invokeExact()

@@ -1,6 +1,5 @@
 package felis.launcher
 
-import felis.ModLoader
 import felis.meta.ModMetadata
 import felis.side.Side
 import felis.transformer.JarContentCollection
@@ -25,12 +24,12 @@ import kotlin.io.path.*
 
 class MinecraftLauncher : GameLauncher, OptionScope {
     private val logger = LoggerFactory.getLogger(MinecraftLauncher::class.java)
-    private val remap: Boolean by option("felis.minecraft.remap", default(false), String::toBooleanStrict)
-    private val cachePath: Path by option("felis.minecraft.cache", default(Paths.get(".felis")), Paths::get)
+    private val remap: Boolean by option("felis.minecraft.remap", DefaultValue.Value(false), String::toBooleanStrict)
+    private val cachePath: Path by option("felis.minecraft.cache", DefaultValue.Value(Paths.get(".felis")), Paths::get)
 
-    override fun instantiate(args: Array<String>): GameInstance {
+    override fun instantiate(side: Side, args: Array<String>): GameInstance {
         val cp = System.getProperty("java.class.path").split(File.pathSeparator).map { Paths.get(it) }
-        val mainClass = when (ModLoader.side) {
+        val mainClass = when (side) {
             Side.CLIENT -> "net.minecraft.client.main.Main"
             Side.SERVER -> "net.minecraft.server.Main"
         }

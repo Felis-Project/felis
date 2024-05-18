@@ -16,7 +16,7 @@ typealias Modid = String
 class ModDiscoverer {
     companion object {
         const val MOD_META = "felis.mod.toml"
-        val toml = Toml {
+        val metadataToml = Toml {
             ignoreUnknownKeys = true
             explicitNulls = false
             serializersModule = SerializersModule {
@@ -85,12 +85,12 @@ class ModDiscoverer {
             }
 
             try {
-                val metaToml = toml.parseToTomlTable(tomlString)
+                val metaToml = metadataToml.parseToTomlTable(tomlString)
                 if (metaToml.getIntegerOrNull("schema") != 1L) {
                     exceptions += ModDiscoveryError("$url, must specify a valid schema version. Available versions are: 1")
                     continue
                 }
-                val metadata = toml.decodeFromString<ModMetadataExtended>(tomlString)
+                val metadata = metadataToml.decodeFromString<ModMetadataExtended>(tomlString)
                 mods += Mod(cc, metadata)
             } catch (e: SerializationException) {
                 val top = ModDiscoveryError("Mod $cc had a malformatted $MOD_META file(at $url)")

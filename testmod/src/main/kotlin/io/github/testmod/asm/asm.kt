@@ -1,4 +1,4 @@
-package felis.asm
+package io.github.testmod.asm
 
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -12,6 +12,13 @@ open class AsmException(msg: String) : Exception(msg)
 class MethodNotFoundException(name: String, clazz: String) :
     AsmException("Method $name could not be found in target $clazz")
 
+fun InsnList.copy(): InsnList {
+    val mn = MethodNode()
+    this.accept(mn)
+
+    return mn.instructions
+}
+
 interface ClassScope {
     val node: ClassNode
     val name: String
@@ -23,6 +30,12 @@ inline fun ClassScope.openMethod(name: String, desc: String, action: MethodScope
     if (method == null) throw MethodNotFoundException(name, this.name)
     action(MethodScope(method, this.internalName))
 }
+
+data class ContainerScope(
+    override val node: ClassNode,
+    override val name: String,
+    override val internalName: String
+) : ClassScope
 
 inline fun ClassScope.openMethod(
     name: String,
@@ -47,11 +60,10 @@ sealed interface InjectionPoint {
             origin.last.let { origin.insert(it, insns) }
     }
 
-    // TODO: These 2 will only inject in the first occurence due to a smoll(TM) bug in their implementation
     data object Return : InjectionPoint {
         override fun inject(scope: MethodScope, insns: InsnList, origin: InsnList) =
             origin.filter { (Opcodes.IRETURN..Opcodes.RETURN).contains(it.opcode) }.forEach {
-                origin.insertBefore(it, insns)
+                origin.insertBefore(it, insns.copy())
             }
     }
 
@@ -91,7 +103,7 @@ sealed interface InjectionPoint {
             }
 
             for (invokation in invokes) {
-                origin.insertBefore(invokation, insns)
+                origin.insertBefore(invokation, insns.copy())
             }
         }
     }
@@ -179,6 +191,9 @@ class InsnScope : LocateScope, TypeScope {
     fun putField(owner: InternalName, name: String, type: Type) = field(Opcodes.PUTFIELD, owner, name, type)
 
     fun add(node: AbstractInsnNode) = this.insns.add(node)
+
+    fun dup() = this.insns.add(InsnNode(Opcodes.DUP))
+    fun swap() = this.insns.add(InsnNode(Opcodes.SWAP))
 
     fun ldc(value: Any) = this.insns.add(LdcInsnNode(value))
 }

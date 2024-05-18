@@ -9,7 +9,7 @@ data class DirectoryScanner(private val paths: Iterable<Path>) : Scanner {
     @OptIn(ExperimentalPathApi::class)
     override fun offer(accept: (ContentCollection) -> Unit) {
         for (modCandidate in paths) {
-            if (modCandidate.notExists()) modCandidate.createDirectories()
+            if (!modCandidate.exists()) modCandidate.createDirectories()
             modCandidate.walk()
                 .map(::JarContentCollection)
                 .forEach { accept(it) }

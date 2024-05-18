@@ -1,39 +1,70 @@
 package felis.transformer
 
-import felis.asm.ClassScope
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
 
-data class ClassContainer internal constructor(
-    override val name: String,
-    private var ref: ClassRef,
-    var skip: Boolean = false
-) : ClassRef, ClassScope {
-    override val internalName by lazy { this.name.replace(".", "/") }
+class ClassContainer(private val bytes: ByteArray, val name: String) {
+    fun interface NodeAction : (ClassNode) -> Unit
+    fun interface VisitorFunction : (ClassVisitor) -> ClassVisitor
 
-    constructor(name: String, ref: ClassRef) : this(name, ref, false)
-    constructor(name: String, bytes: ByteArray) : this(name, ClassRef.BytesRef(bytes))
+    val internalName: String
+        get() = name.replace('.', '/')
 
-    // Always call when modifying bytes
-    fun newBytes(bytes: ByteArray) {
-        this.ref = ClassRef.BytesRef(bytes)
+    private var nodeActions: MutableList<NodeAction> = mutableListOf()
+    // we know we have a visitor since environment stripping
+    private var visitorChain: MutableList<VisitorFunction> = ArrayList(1)
+    var skip = false
+    // TODO: Class hierarchy information for COMPUTE_FRAMES through current class + class readers
+    private val classWriter: ClassWriter
+        get() = ClassWriter(0)
+
+
+    fun node(action: NodeAction) = this.nodeActions.add(action)
+
+    fun visitor(action: VisitorFunction) = this.visitorChain.add(action)
+
+    private fun runNodeActions(node: ClassNode): ClassWriter {
+        val writer = this.classWriter
+        this.nodeActions.forEach { it.invoke(node) }
+        node.accept(writer)
+        return writer
     }
 
-    override fun nodeRef(): ClassRef.NodeRef {
-        this.ref = this.ref.nodeRef()
-        return this.ref as ClassRef.NodeRef
+    fun modifiedBytes(): ByteArray {
+        var newBytes = bytes
+
+        if (this.visitorChain.isNotEmpty()) {
+            val reader = ClassReader(newBytes)
+            newBytes = if (this.nodeActions.isNotEmpty()) {
+                val node = ClassNode()
+                this.walk(reader, node)
+                this.runNodeActions(node)
+            } else {
+                val writer = this.classWriter
+                this.walk(reader, writer)
+                writer
+            }.toByteArray()
+        } else if (this.nodeActions.isNotEmpty()) {
+            val reader = ClassReader(newBytes)
+            val node = ClassNode()
+            reader.accept(node, ClassReader.EXPAND_FRAMES)
+            // TODO: ClassWrapper api
+            newBytes = this.runNodeActions(node).toByteArray()
+        }
+
+        return newBytes
     }
 
-    override fun bytesRef(): ClassRef.BytesRef {
-        this.ref = this.ref.bytesRef()
-        return this.ref as ClassRef.BytesRef
+    fun walk(visitor: ClassVisitor) {
+        with(ClassReader(this.bytes)) {
+            accept(visitor, ClassReader.EXPAND_FRAMES)
+        }
     }
 
-    override val node: ClassNode
-        get() = this.nodeRef().node
-    override val bytes: ByteArray
-        get() = this.bytesRef().bytes
-    override val isNodeRef: Boolean
-        get() = this.ref.isNodeRef
-    override val isBytesRef: Boolean
-        get() = this.ref.isBytesRef
+    private fun walk(reader: ClassReader, initial: ClassVisitor) =
+        this.visitorChain.foldRight(initial) { fn, acc ->
+            fn.invoke(acc)
+        }.let { reader.accept(it, ClassReader.EXPAND_FRAMES) }
 }

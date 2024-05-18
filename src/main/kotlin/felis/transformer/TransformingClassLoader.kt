@@ -1,12 +1,12 @@
 package felis.transformer
 
-import felis.ModLoader
 import felis.util.PerfCounter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.net.URL
 import java.util.*
+import kotlin.jvm.Throws
 
 /**
  * This class loader misuses the classloading delegation model to:
@@ -17,42 +17,48 @@ import java.util.*
  * You can ignore a class or package using [IgnoreList]
  *
  * @author 0xJoeMama
+ * @constructor
+ * @param transformer the root transformer used by this class loader
  */
-class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
+class TransformingClassLoader(
+    private val transformer: Transformer,
+    private val contentCollection: ContentCollection
+) : ClassLoader(null) {
     private val logger: Logger = LoggerFactory.getLogger(TransformingClassLoader::class.java)
-    private val classReadPerfCounter =
-        PerfCounter("Read {} class containers in {}s, Average read time {}ms", wait = true)
-    private val transformationPerfCounter =
-        PerfCounter("Transformed {} classes in {}s, Average transformation time {}ms", wait = true)
-    private val classLoadPerfCounter =
-        PerfCounter("Loaded {} classes in {}s. Average load time was {}ms", wait = true)
+    private val classLoadPerfCounter = PerfCounter("Loaded {} classes in {}s. Average load time was {}ms", wait = true)
     val ignored = IgnoreList()
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun getClassData(name: String): ClassContainer? {
+    fun readContainer(name: String): ClassContainer? {
         val normalName = name.replace(".", "/") + ".class"
-        // getResourceAsStream since mixins require system resources as well
-        return this.getResourceAsStream(normalName)?.use { ClassContainer(name, it.readAllBytes()) }
+        return this.getResourceAsStream(normalName)?.use { ClassContainer(it.readAllBytes(), name) }
     }
 
     override fun getResourceAsStream(name: String): InputStream? =
-        RootContentCollection.openStream(name) ?: getSystemResourceAsStream(name)
+        this.contentCollection.openStream(name) ?: getSystemResourceAsStream(name)
 
-    // TODO: On average twice the amount of time in findClass is used by loadClass. Figure out why that is happening
+    @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String, resolve: Boolean): Class<*> = synchronized(getClassLoadingLock(name)) {
         this.classLoadPerfCounter.timed {
             // first see if it's a platform class
             val clazz: Class<*> = try {
                 getPlatformClassLoader().loadClass(name)
             } catch (e: ClassNotFoundException) {
+                // then check if it has specifically been ignored
+                // this currently only happens for the loader itself as well as the dependencies of the loader
                 if (this.ignored.isIgnored(name)) {
+                    // load it from the system in that case
                     findSystemClass(name)
                 } else {
+                    // otherwise check if we have already loaded it
                     var c: Class<*>? = this.findLoadedClass(name)
                     if (c == null) {
+                        // if not try to load it now
                         c = this.findClass(name)
                         if (c == null) {
+                            // if we can't relay to system
                             c = this.findSystemClass(name)
+                            // if system can't find it :concern:
                             if (c == null) throw ClassNotFoundException("Couldn't find class $name")
                         }
                     }
@@ -65,42 +71,45 @@ class TransformingClassLoader : ClassLoader(getSystemClassLoader()) {
         }
     }
 
-    // load class and apply defined transformations
-    public override fun findClass(name: String): Class<*>? {
-        val classData = this.classReadPerfCounter.timed { this.getClassData(name) }
-        if (classData != null) {
-            val bytes = this.transformationPerfCounter.timed {
-                ModLoader.transformer.transform(classData)
-                if (!classData.skip) {
-                    classData.bytes
-                } else {
-                    null
-                }
-            }
+    /**
+     * Attempts to load a class using this class loader.
+     * This applies transformations to the class, even if it is not a game class.
+     *
+     * @param name the class name of the class separated by '.'
+     */
+    override fun findClass(name: String): Class<*>? {
+        // we attempt to read a container, if we can't we know nothing about the class
+        val classData = this.readContainer(name) ?: return null
 
-            if (bytes != null) {
-                // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
-                // TODO: Setup CodeSource/ProtectionDomain
-                return this.defineClass(name, bytes, 0, bytes.size, null)
-            }
+        this.transformer.transform(classData)
+        if (!classData.skip) {
+            return this.defineClass(classData)
         }
 
         return null
     }
 
-    fun defineClass(container: ClassContainer): Class<*> =
-        this.defineClass(container.name, container.bytes, 0, container.bytes.size)
+    /**
+     * Defines a class as provided by the container parameter
+     *
+     * @param container the [ClassContainer] with the data of the target class
+     */
+    fun defineClass(container: ClassContainer): Class<*> {
+        // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
+        // TODO: Setup CodeSource/ProtectionDomain
+        val bytes = container.modifiedBytes() // this parses the class and resolves all modifications to it
+        return this.defineClass(name, bytes, 0, bytes.size, null)
+    }
 
     override fun findResource(name: String): URL? {
-        val targetUrl = RootContentCollection.getContentUrl(name)
+        val targetUrl = this.contentCollection.getContentUrl(name)
         if (targetUrl != null) return targetUrl
-
         this.logger.warn("Could not locate resource {}. Here be dragons!!!", name)
         return null
     }
 
     override fun findResources(name: String): Enumeration<URL> =
-        Collections.enumeration(RootContentCollection.getContentUrls(name))
+        Collections.enumeration(this.contentCollection.getContentUrls(name))
 
     companion object {
         init {

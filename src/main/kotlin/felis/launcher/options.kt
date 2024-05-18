@@ -4,11 +4,11 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 interface OptionScope {
-    fun <T> option(name: String, default: DefaultValue<T> = noValue(), creator: (String) -> T): OptionKey<T> =
-        OptionKey(name, default, creator)
-
-    fun noValue(): DefaultValue<Nothing> = DefaultValue.NoValue
-    fun <T> default(t: T): DefaultValue<T> = DefaultValue.Value(t)
+    fun <T> option(
+        name: String,
+        default: DefaultValue<T> = DefaultValue.NoValue,
+        creator: (String) -> T
+    ): OptionKey<T> = OptionKey(name, default, creator)
 }
 
 class OptionKey<T>(
@@ -18,12 +18,12 @@ class OptionKey<T>(
 ) : ReadOnlyProperty<Any, T> {
     override fun getValue(thisRef: Any, property: KProperty<*>): T =
         System.getProperty(name)?.let(creator) ?: when (default) {
-            DefaultValue.NoValue -> throw IllegalStateException("Property $name must be specified or have a default value")
             is DefaultValue.Value -> default.t
+            DefaultValue.NoValue -> throw IllegalStateException("Property $name must be specified or have a default value")
         }
 }
 
-sealed class DefaultValue<out T> {
-    class Value<out T>(val t: T) : DefaultValue<T>()
-    data object NoValue : DefaultValue<Nothing>()
+sealed interface DefaultValue<out T> {
+    class Value<out T>(val t: T) : DefaultValue<T>
+    data object NoValue : DefaultValue<Nothing>
 }
