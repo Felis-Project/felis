@@ -22,10 +22,10 @@ import java.nio.file.Paths
 import kotlin.io.path.*
 
 
-class MinecraftLauncher : GameLauncher, OptionScope {
+class MinecraftLauncher : GameLauncher {
     private val logger = LoggerFactory.getLogger(MinecraftLauncher::class.java)
-    private val remap: Boolean by option("felis.minecraft.remap", DefaultValue.Value(false), String::toBooleanStrict)
-    private val cachePath: Path by option("felis.minecraft.cache", DefaultValue.Value(Paths.get(".felis")), Paths::get)
+    private val remap: Boolean by OptionKey("felis.minecraft.remap", DefaultValue.Value(false), String::toBooleanStrict)
+    private val cachePath: Path by OptionKey("felis.minecraft.cache", DefaultValue.Value(Paths.get(".felis")), Paths::get)
 
     override fun instantiate(side: Side, args: Array<String>): GameInstance {
         val cp = System.getProperty("java.class.path").split(File.pathSeparator).map { Paths.get(it) }

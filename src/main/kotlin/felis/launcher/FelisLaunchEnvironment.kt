@@ -7,20 +7,20 @@ import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 
-object FelisLaunchEnvironment : OptionScope {
-    val side: Side by option("felis.side") {
+object FelisLaunchEnvironment {
+    val side: Side by OptionKey("felis.side") {
         enumValueOf(it)
     }
-    val mods: List<Path> by option("felis.mods", DefaultValue.Value(emptyList())) {
+    val mods: List<Path> by OptionKey("felis.mods", DefaultValue.Value(emptyList())) {
         it.split(File.pathSeparator).filter(String::isNotEmpty).map(Paths::get)
     }
-    val launcher: GameLauncher by option("felis.launcher", DefaultValue.Value(MinecraftLauncher())) {
+    val launcher: GameLauncher by OptionKey("felis.launcher", DefaultValue.Value(MinecraftLauncher())) {
         Class.forName(it).getDeclaredConstructor().newInstance() as GameLauncher
     }
-    val printClassPath: Boolean by option("felis.print.cp", DefaultValue.Value(false)) {
+    val printClassPath: Boolean by OptionKey("felis.print.cp", DefaultValue.Value(false)) {
         it.toBooleanStrict()
     }
-    val audit: Path? by option("felis.audit", DefaultValue.Value(null)) {
+    val audit: Path? by OptionKey("felis.audit", DefaultValue.Value(null)) {
         Paths.get(it)
     }
     val logger: Logger = LoggerFactory.getLogger(FelisLaunchEnvironment::class.java)

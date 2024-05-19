@@ -111,8 +111,11 @@ object ModLoader {
         // run the default scanners
         this.discoverer.walkScanner(ClasspathScanner) // used primarily by development environments
         this.discoverer.walkScanner(DirectoryScanner(mods)) // used primarily by users
-
-        this.languageAdapter = DelegatingLanguageAdapter() // tool used to create instances of abstract objects
+        // tool used to create instances of abstract objects
+        this.languageAdapter = DelegatingLanguageAdapter(
+            KotlinLanguageAdapter,
+            JavaLanguageAdapter
+        )
         this.game = launcher.instantiate(this.side, gameArgs) // create the instance of the game
         this.discoverer.registerMod(this.game) // register the game
         // tool that transforms classes passed into it using registered Transformations
@@ -133,12 +136,6 @@ object ModLoader {
             ignorePackageAbsolute("felis.launcher")
             ignorePackageAbsolute("felis.language")
             ignorePackageAbsolute("felis.util")
-        }
-
-        // register our language adapters
-        this.languageAdapter.apply {
-            registerAdapter(KotlinLanguageAdapter)
-            registerAdapter(JavaLanguageAdapter)
         }
 
         // Register built-in transformations of the loader itself
@@ -230,7 +227,7 @@ object ModLoader {
                             output,
                             StandardOpenOption.CREATE,
                             StandardOpenOption.WRITE
-                        ).use { it.write(container.modifiedBytes()) }
+                        ).use { it.write(container.modifiedBytes(this.classLoader.classInfoSet)) }
                     } else if (!file.isDirectory()) {
                         val output = outputJar.getPath("/").resolve(file.pathString)
                         output.createParentDirectories()

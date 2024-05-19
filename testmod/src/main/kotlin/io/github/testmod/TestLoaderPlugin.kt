@@ -57,7 +57,7 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
 
         logger.info("Doing stuff")
 //        ModLoader.transformer.registerTransformation {
-//            logger.info("${it.name} is ${it.bytes.size} bytes in size")
+//            logger.info("${it.name} is being loaded")
 //        }
     }
 }

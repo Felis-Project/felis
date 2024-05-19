@@ -1,6 +1,5 @@
 package felis.transformer
 
-import felis.ModLoader
 import felis.language.LanguageAdapter
 import felis.meta.ModDiscoverer
 import org.slf4j.Logger

@@ -1,24 +1,27 @@
 package felis.transformer
 
+import felis.util.ClassInfo
+import felis.util.ClassInfoSet
 import felis.util.PerfCounter
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.Opcodes
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.net.URL
 import java.util.*
-import kotlin.jvm.Throws
 
 /**
  * This class loader misuses the classloading delegation model to:
  * 1. Load mod classes
  * 2. Load game classes
  * 3. Load library classes
- * The normal java classpath isn't used for anything other that ignored packages/classes.
+ * The normal java classpath isn't used for anything other than ignored packages/classes.
  * You can ignore a class or package using [IgnoreList]
  *
- * @author 0xJoeMama
- * @constructor
  * @param transformer the root transformer used by this class loader
+ * @param contentCollection the root content collection
+ * @author 0xJoeMama
  */
 class TransformingClassLoader(
     private val transformer: Transformer,
@@ -27,6 +30,17 @@ class TransformingClassLoader(
     private val logger: Logger = LoggerFactory.getLogger(TransformingClassLoader::class.java)
     private val classLoadPerfCounter = PerfCounter("Loaded {} classes in {}s. Average load time was {}ms", wait = true)
     val ignored = IgnoreList()
+    val classInfoSet = ClassInfoSet { name ->
+        val internal = name.replace('.', '/')
+        this.getResourceAsStream("$internal.class")?.use(::ClassReader)?.let {
+            ClassInfo(
+                it.className,
+                it.superName,
+                it.interfaces.toMutableList(),
+                it.access and Opcodes.ACC_INTERFACE != 0
+            )
+        } ?: throw ClassNotFoundException("Class $name was not found in current environment")
+    }
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun readContainer(name: String): ClassContainer? {
@@ -37,7 +51,6 @@ class TransformingClassLoader(
     override fun getResourceAsStream(name: String): InputStream? =
         this.contentCollection.openStream(name) ?: getSystemResourceAsStream(name)
 
-    @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String, resolve: Boolean): Class<*> = synchronized(getClassLoadingLock(name)) {
         this.classLoadPerfCounter.timed {
             // first see if it's a platform class
@@ -97,7 +110,8 @@ class TransformingClassLoader(
     fun defineClass(container: ClassContainer): Class<*> {
         // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
         // TODO: Setup CodeSource/ProtectionDomain
-        val bytes = container.modifiedBytes() // this parses the class and resolves all modifications to it
+        val bytes =
+            container.modifiedBytes(this.classInfoSet) // this parses the class and resolves all modifications to it
         return this.defineClass(name, bytes, 0, bytes.size, null)
     }
 

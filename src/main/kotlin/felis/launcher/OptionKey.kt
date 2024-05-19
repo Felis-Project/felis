@@ -3,14 +3,6 @@ package felis.launcher
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-interface OptionScope {
-    fun <T> option(
-        name: String,
-        default: DefaultValue<T> = DefaultValue.NoValue,
-        creator: (String) -> T
-    ): OptionKey<T> = OptionKey(name, default, creator)
-}
-
 class OptionKey<T>(
     private val name: String,
     private val default: DefaultValue<T> = DefaultValue.NoValue,
@@ -21,9 +13,4 @@ class OptionKey<T>(
             is DefaultValue.Value -> default.t
             DefaultValue.NoValue -> throw IllegalStateException("Property $name must be specified or have a default value")
         }
-}
-
-sealed interface DefaultValue<out T> {
-    class Value<out T>(val t: T) : DefaultValue<T>
-    data object NoValue : DefaultValue<Nothing>
 }
