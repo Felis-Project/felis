@@ -5,7 +5,6 @@ import felis.util.PerfCounter
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
 import net.peanuuutz.tomlkt.Toml
 import net.peanuuutz.tomlkt.getIntegerOrNull
 import org.slf4j.LoggerFactory
@@ -21,7 +20,6 @@ class ModDiscoverer {
             explicitNulls = false
             serializersModule = SerializersModule {
                 contextual(Path::class, PathSerializer)
-                polymorphic(DescriptionMetadata::class, DescriptionSerializer.Extended)
             }
         }
     }

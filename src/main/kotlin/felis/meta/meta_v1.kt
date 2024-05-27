@@ -80,11 +80,13 @@ open class DependencyMetadata(
 
 @Serializable
 sealed interface SingleDependencyMetadata {
+    val version: Constraint
+
     @Serializable
     @SerialName("library")
-    class Library(val group: String, val artifact: String, val version: Constraint) : SingleDependencyMetadata
+    class Library(val group: String, val artifact: String, override val version: Constraint) : SingleDependencyMetadata
 
     @Serializable
     @SerialName("mod")
-    class Mod(val modid: String, val version: Constraint): SingleDependencyMetadata
+    class Mod(val modid: String, override val version: Constraint) : SingleDependencyMetadata
 }

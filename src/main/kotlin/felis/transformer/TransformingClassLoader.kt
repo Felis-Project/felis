@@ -1,10 +1,10 @@
 package felis.transformer
 
-import felis.util.ClassInfo
 import felis.util.ClassInfoSet
 import felis.util.PerfCounter
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.tree.ClassNode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InputStream
@@ -33,7 +33,7 @@ class TransformingClassLoader(
     val classInfoSet = ClassInfoSet { name ->
         val internal = name.replace('.', '/')
         this.getResourceAsStream("$internal.class")?.use(::ClassReader)?.let {
-            ClassInfo(
+            ClassInfoSet.ClassInfo(
                 it.className,
                 it.superName,
                 it.interfaces.toMutableList(),
@@ -47,6 +47,16 @@ class TransformingClassLoader(
         val normalName = name.replace(".", "/") + ".class"
         return this.getResourceAsStream(normalName)?.use { ClassContainer(it.readAllBytes(), name) }
     }
+
+    @Suppress("unused") // external API
+    fun unmodifiedClassNode(name: String): ClassNode =
+        this.getResourceAsStream(name.replace(".", "/") + ".class")
+            ?.use(::ClassReader)
+            ?.let {
+                val node = ClassNode()
+                it.accept(node, ClassReader.EXPAND_FRAMES)
+                node
+            } ?: throw ClassNotFoundException("Class $name could not be found in the current environment")
 
     override fun getResourceAsStream(name: String): InputStream? =
         this.contentCollection.openStream(name) ?: getSystemResourceAsStream(name)
@@ -96,6 +106,7 @@ class TransformingClassLoader(
 
         this.transformer.transform(classData)
         if (!classData.skip) {
+            // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
             return this.defineClass(classData)
         }
 
@@ -108,10 +119,9 @@ class TransformingClassLoader(
      * @param container the [ClassContainer] with the data of the target class
      */
     fun defineClass(container: ClassContainer): Class<*> {
-        // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
+        // this parses the class and resolves all modifications to it
+        val bytes = container.modifiedBytes(this.classInfoSet)
         // TODO: Setup CodeSource/ProtectionDomain
-        val bytes =
-            container.modifiedBytes(this.classInfoSet) // this parses the class and resolves all modifications to it
         return this.defineClass(name, bytes, 0, bytes.size, null)
     }
 

@@ -2,6 +2,7 @@ schema = 1
 name = "Testmod"
 modid = "testmod"
 version = "1.0.0"
+description = "test description"
 
 [[transformations]]
 name = "test transform"

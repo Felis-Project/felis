@@ -30,7 +30,7 @@ import kotlin.io.path.pathString
  * @author 0xJoeMama
  */
 // TODO/Missing Features for initial release
-// 2. Decouple loader internal to remove global variable usage within the loader itself(in progress)
+// 2. Decouple loader internals to remove global variable usage within the loader itself(in progress)
 // 3. JarInJar
 @Suppress("MemberVisibilityCanBePrivate")
 object ModLoader {

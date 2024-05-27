@@ -5,7 +5,7 @@ tomlkt = "0.3.7"
 kotlin-coroutines = "1.8.0"
 kotlin-serialization = "1.9.23"
 dokka = "1.9.20"
-kotlin = "1.9.23"
+kotlin = "1.9.24"
 slf4j = "2.0.9" # matching the mc version
 
 [libraries]

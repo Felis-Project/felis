@@ -17,6 +17,7 @@ object ModMetadataExtendedSerializer : KSerializer<ModMetadataExtended> {
         val extra = tomlDecoder.decodeTomlElement().asTomlTable()
         return ModMetadataExtended(metadata, extra)
     }
+
     override fun serialize(encoder: Encoder, value: ModMetadataExtended) {
         encoder.encodeSerializableValue(ModMetadata.serializer(), value.metadata)
     }
@@ -47,16 +48,24 @@ object DescriptionSerializer : TomlContentPolymorphicSerializer<DescriptionMetad
             element<String>("slogan", isOptional = true)
         }
 
-        override fun deserialize(decoder: Decoder): DescriptionMetadata =
-            decoder.decodeStructure(this.descriptor) {
-                val description: String = decodeStringElement(descriptor, descriptor.getElementIndex("description"))
-                val slogan = decodeNullableSerializableElement(
-                    descriptor,
-                    descriptor.getElementIndex("slogan"),
-                    String.serializer()
-                )
-                DescriptionMetadata(description, slogan)
-            }
+        override fun deserialize(decoder: Decoder): DescriptionMetadata = decoder.decodeStructure(this.descriptor) {
+            lateinit var description: String
+            var slogan: String? = null
+            do {
+                when (val idx = decodeElementIndex(descriptor)) {
+                    descriptor.getElementIndex("description") -> description = decodeStringElement(descriptor, idx)
+                    descriptor.getElementIndex("slogan") -> slogan = decodeNullableSerializableElement(
+                        descriptor,
+                        idx,
+                        String.serializer()
+                    )
+
+                    CompositeDecoder.DECODE_DONE -> break
+                    else -> throw SerializationException("Invalid element index $idx")
+                }
+            } while (true)
+            DescriptionMetadata(description, slogan)
+        }
 
         override fun serialize(encoder: Encoder, value: DescriptionMetadata) =
             encoder.encodeStructure(this.descriptor) {

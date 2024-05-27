@@ -16,11 +16,11 @@
       "url": "https://repo.maven.apache.org/maven2/"
     },
     {
-      "name": "org.jetbrains.kotlin:kotlin-reflect:1.9.23",
+      "name": "org.jetbrains.kotlin:kotlin-reflect:1.9.24",
       "url": "https://repo.maven.apache.org/maven2/"
     },
     {
-      "name": "org.jetbrains.kotlin:kotlin-stdlib:1.9.23",
+      "name": "org.jetbrains.kotlin:kotlin-stdlib:1.9.24",
       "url": "https://repo.maven.apache.org/maven2/"
     },
     {
@@ -60,7 +60,7 @@
       "url": "https://repo.maven.apache.org/maven2/"
     },
     {
-      "name": "felis:felis:1.5.0-alpha",
+      "name": "felis:felis:1.6.0-alpha",
       "url": "https://repsy.io/mvn/0xjoemama/public/"
     }
   ],

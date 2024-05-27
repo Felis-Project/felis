@@ -2,6 +2,11 @@ schema = 1
 name = "Felis Loader"
 modid = "felis"
 version = "${version}"
+
+[description]
 description = """
-A modern mod loader for Minecraft
+You know how you sometimes need that one loader feature, that is not usable from mods?
+You know how no loaders allow you to modify their behavior to a huge extend?
+Yea, that's no more thanks to Felis.
 """
+slogan = "A modern mod loader for Minecraft"
