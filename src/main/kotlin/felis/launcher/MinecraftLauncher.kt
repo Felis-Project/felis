@@ -51,7 +51,7 @@ class MinecraftLauncher : GameLauncher {
                     return GameInstance(
                         JarContentCollection(minecraftJar),
                         ModMetadata(
-                            schema = 1, name = "Minecraft", modid = "minecraft", version = Version.parse(versionId)
+                            schema = 1, name = "Minecraft", modid = "minecraft", version = Version.parse(versionId, false)
                         ).extended(),
                         mainClass,
                         args

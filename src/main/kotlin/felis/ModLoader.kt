@@ -120,6 +120,7 @@ object ModLoader {
         this.discoverer.registerMod(this.game) // register the game
         // tool that transforms classes passed into it using registered Transformations
         this.transformer = Transformer(this.discoverer, this.languageAdapter)
+        this.discoverer.finish()
         // the class loader that uses everything in here to work
         this.classLoader = TransformingClassLoader(this.transformer, RootContentCollection)
         this.classLoader.ignored.apply {
@@ -129,6 +130,7 @@ object ModLoader {
             ignorePackage("net.peanuuutz.tomlkt")
             ignorePackage("org.slf4j")
             ignorePackage("org.lwjgl")
+            ignorePackage("io.github.z4kn4fein.semver")
             ignorePackageAbsolute("felis")
             ignorePackageAbsolute("felis.meta")
             ignorePackageAbsolute("felis.side")
@@ -185,7 +187,7 @@ object ModLoader {
         }
         this.logger.info(sw.toString())
 
-        val mainClass = classLoader.loadClass(owner)
+        val mainClass = this.classLoader.loadClass(owner)
         // using MethodLookup because technically speaking it's better that reflection
         val mainMethod = MethodHandles.publicLookup().`in`(mainClass).findStatic(
             mainClass,

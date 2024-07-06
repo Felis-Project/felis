@@ -6,7 +6,7 @@ group = "io.github.joemama"
 version = "1.0.0-alpha"
 
 loaderMake {
-    version = "1.20.6"
+    version = "1.21"
 }
 
 dependencies {

@@ -2,8 +2,11 @@ package io.github.testmod
 
 import felis.LoaderPluginEntrypoint
 import felis.ModLoader
+import felis.meta.*
 import felis.transformer.ClassContainer
 import felis.transformer.ContentCollection
+import io.github.z4kn4fein.semver.Version
+import io.github.z4kn4fein.semver.constraints.Constraint
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -21,13 +24,15 @@ import java.nio.file.Path
 object TestLoaderPlugin : LoaderPluginEntrypoint {
     private val logger = LoggerFactory.getLogger(TestLoaderPlugin::class.java)
     override fun onLoaderInit() {
+        val dummyCC = object : ContentCollection {
+            override fun getContentUrl(name: String): URL? = null
+            override fun getContentPath(path: String): Path? = null
+            override fun openStream(name: String): InputStream? = null
+            override fun getContentUrls(name: String): Collection<URL> = emptyList()
+        }
+
         ModLoader.discoverer.walkScanner { accept ->
-            accept(object : ContentCollection {
-                override fun getContentUrl(name: String): URL? = null
-                override fun getContentPath(path: String): Path? = null
-                override fun openStream(name: String): InputStream? = null
-                override fun getContentUrls(name: String): Collection<URL> = emptyList()
-            })
+            accept(dummyCC)
         }
         val node = ClassNode().apply {
             name = "test/class/Class"
@@ -55,9 +60,39 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
         val invoker = MethodHandles.publicLookup().findStatic(cls, "test", MethodType.methodType(Void.TYPE))
         invoker.invokeExact()
 
-        logger.info("Doing stuff")
-//        ModLoader.transformer.registerTransformation {
-//            logger.info("${it.name} is being loaded")
-//        }
+        ModLoader.discoverer.registerMod(
+            Mod(
+                dummyCC,
+                ModMetadata(
+                    schema = 1,
+                    modid = "testmod",
+                    version = Version.parse("1.2.0"),
+                    name = "testmod",
+                    dependencies = DependencyMetadata(
+                        requires = listOf(
+                            SingleDependencyMetadata("minecraft", Constraint.parse(">=1.0")),
+                        )
+                    )
+                ).extended()
+            )
+        )
+
+        ModLoader.discoverer.registerMod(
+            Mod(
+                dummyCC,
+                ModMetadata(
+                    schema = 1,
+                    modid = "ttr2",
+                    version = Version.parse("0.0.1"),
+                    name = "testmod",
+                    dependencies = DependencyMetadata(
+                        breaks = listOf(SingleDependencyMetadata("testmod", Constraint.parse("<=1.0"))),
+                        requires = listOf(SingleDependencyMetadata("testmod", Constraint.parse(">=1.0.0")))
+                    )
+                ).extended()
+            )
+        )
+
+        this.logger.info("Doing stuff")
     }
 }

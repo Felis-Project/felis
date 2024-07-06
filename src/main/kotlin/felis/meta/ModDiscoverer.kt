@@ -24,40 +24,38 @@ class ModDiscoverer {
         }
     }
 
-    private val internalMods = hashMapOf<Modid, Mod>()
     private val internalLibs = mutableListOf<ContentCollection>()
+    private var modSet: ModSet? = null
     private val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
     private val perfcounter = PerfCounter()
+    private val resolver = ModResolver()
 
     // offered to outsiders as API
-    val mods: Iterable<Mod> = this.internalMods.values
     val libs: Iterable<ContentCollection> = this.internalLibs.asIterable()
-
-    fun registerMod(mod: Mod) {
-        if (mod.modid in this.internalMods) {
-            throw ModDiscoveryError("Mod ${mod.modid} has already been registered")
-        }
-
-        this.internalMods[mod.modid] = mod
-    }
+    val mods: Iterable<Mod>
+        get() = this.modSet ?: emptyList()
 
     fun walkScanner(scanner: Scanner) {
         this.logger.info("mod discovery running for scanner $scanner")
         scanner.offer { this.perfcounter.timed { this.consider(it) } }
     }
 
-    @Suppress("MemberVisibilityCanBePrivate")
+    fun registerMod(mod: Mod) = this.resolver.record(mod)
+
+    @Suppress("MemberVisibilityCanBePrivate") // public API
     fun consider(contentCollection: ContentCollection) {
         val result = createMods(contentCollection)
 
-        if (result is ModDiscoveryResult.Mods) result.mods.forEach(this::registerMod)
+        if (result is ModDiscoveryResult.Mods) result.mods.forEach(this.resolver::record)
         if (result is ModDiscoveryResult.Error) result.failedMods.forEach(Exception::printStackTrace)
         if (result is ModDiscoveryResult.NoMods) this.internalLibs.add(contentCollection)
     }
 
     fun finish() {
+        this.modSet = this.resolver.resolve(modSet)
+
         this.perfcounter.printSummary { _, total, average ->
-            this.logger.info("discovered ${this.internalMods.size} mods in ${total}s. Average discovery time was ${average}ms")
+            this.logger.info("discovered ${this.modSet?.size} mods in ${total}s. Average discovery time was ${average}ms")
         }
     }
 

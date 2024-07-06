@@ -60,10 +60,8 @@ class ClassContainer(private val bytes: ByteArray, val name: String) {
         return newBytes
     }
 
-    fun walk(visitor: ClassVisitor) {
-        with(ClassReader(this.bytes)) {
-            accept(visitor, ClassReader.EXPAND_FRAMES)
-        }
+    fun walk(visitor: ClassVisitor) = with(ClassReader(this.bytes)) {
+        accept(visitor, ClassReader.EXPAND_FRAMES)
     }
 
     class Writer(private val classInfoSet: ClassInfoSet) : ClassWriter(COMPUTE_FRAMES) {

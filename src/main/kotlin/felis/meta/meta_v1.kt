@@ -3,7 +3,6 @@ package felis.meta
 import io.github.z4kn4fein.semver.Version
 import io.github.z4kn4fein.semver.constraints.Constraint
 import kotlinx.serialization.Contextual
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.peanuuutz.tomlkt.TomlElement
 import java.nio.file.Path
@@ -79,14 +78,8 @@ open class DependencyMetadata(
 )
 
 @Serializable
-sealed interface SingleDependencyMetadata {
-    val version: Constraint
-
-    @Serializable
-    @SerialName("library")
-    class Library(val group: String, val artifact: String, override val version: Constraint) : SingleDependencyMetadata
-
-    @Serializable
-    @SerialName("mod")
-    class Mod(val modid: String, override val version: Constraint) : SingleDependencyMetadata
+open class SingleDependencyMetadata(val modid: String, val version: Constraint) {
+    override fun toString(): String {
+        return "SingleDependencyMetadata(modid='$modid', version=$version)"
+    }
 }

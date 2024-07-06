@@ -54,18 +54,17 @@ data class PathUnionContentCollection(val paths: List<Path>) : ContentCollection
  * Load content through a ContentCollection
  * Priority is: mods -> game -> libs
  */
+// TODO: Make this a class given to the TransformingClassLoader
 data object RootContentCollection : ContentCollection {
     override fun getContentUrl(name: String): URL? = this.findPrioritized { it.getContentUrl(name) }
     override fun getContentPath(path: String): Path? = this.findPrioritized { it.getContentPath(path) }
     override fun openStream(name: String): InputStream? = this.findPrioritized { it.openStream(name) }
     override fun getContentUrls(name: String): Collection<URL> = buildList {
         addAll(ModLoader.discoverer.mods.flatMap { it.getContentUrls(name) })
-        addAll(ModLoader.game.getContentUrls(name))
         addAll(ModLoader.discoverer.libs.flatMap { it.getContentUrls(name) })
     }
 
     private inline fun <T> findPrioritized(getter: (ContentCollection) -> T?) =
         ModLoader.discoverer.mods.firstNotNullOfOrNull(getter)
-            ?: getter(ModLoader.game)
             ?: ModLoader.discoverer.libs.firstNotNullOfOrNull { getter(it) }
 }
