@@ -110,7 +110,9 @@ object ModLoader {
 
         // run the default scanners
         this.discoverer.walkScanner(ClasspathScanner) // used primarily by development environments
-        this.discoverer.walkScanner(DirectoryScanner(mods)) // used primarily by users
+        val directoryScanner = DirectoryScanner(mods)
+        this.discoverer.walkScanner(directoryScanner) // used primarily by users
+        this.discoverer.walkScanner(JarInJarScanner(listOf(ClasspathScanner, directoryScanner)))
         // tool used to create instances of abstract objects
         this.languageAdapter = DelegatingLanguageAdapter(
             KotlinLanguageAdapter,
@@ -145,7 +147,6 @@ object ModLoader {
 
         // call all loader plugin entrypoints after we set ourselves up
         this.callEntrypoint("loader_plugin", LoaderPluginEntrypoint::onLoaderInit)
-        // TODO: Lock languageAdapter transformer and discoverer registration methods after the entrypoint has been called
 
         // the discoverer is done, since after plugins no one else can register scanners or mods
         this.discoverer.finish()
