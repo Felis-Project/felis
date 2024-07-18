@@ -1,5 +1,6 @@
 package felis.meta
 
+import felis.launcher.FelisLaunchEnvironment
 import io.github.z4kn4fein.semver.Version
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -39,15 +40,28 @@ class ModResolver {
         if (leaves.isEmpty())
             throw ModResolutionError("No leaf mods found. This means that some mods have a circular dependency on one another and thus it's a good idea to check which ones they are.")
 
-        // check dependencies
-        for (leaf in leaves.keys) {
-            val versions = modidToVersion.getValue(leaf.modid)
-            if (versions.size != 1)
-                throw ModResolutionError(
-                    "Multiple leaf versions: \"${leaf.modid}\" has multiple available versions($versions) with no way to specify which one is to be used"
-                )
-            this.resolve(leaf, modidToVersion)
+        var hash: Int
+        if (FelisLaunchEnvironment.printResolutionStages) {
+            val leafString = buildString {
+                appendLine()
+                for (leaf in leaves.keys) {
+                    appendLine("- $leaf")
+                }
+            }
+            this.logger.info("Dependency stage. Detected leafs: $leafString")
         }
+        // check dependencies
+        do {
+            hash = modidToVersion.hashCode()
+            for (leaf in leaves.keys) {
+                val versions = modidToVersion.getValue(leaf.modid)
+                if (versions.size != 1)
+                    throw ModResolutionError(
+                        "Multiple leaf versions: \"${leaf.modid}\" has multiple available versions($versions) with no way to specify which one is to be used"
+                    )
+                this.resolve(leaf, modidToVersion)
+            }
+        } while (modidToVersion.values.all { it.size > 1 } && modidToVersion.hashCode() != hash)
 
         // always pick the newest valid version
         val modSetCandidate = modidToVersion
@@ -62,7 +76,7 @@ class ModResolver {
 
                 for (breakCand in modSetCandidate) {
                     if (breakCand.modid == breakingMod.modid && breakingMod.version.isSatisfiedBy(breakCand.version))
-                        throw ModResolutionError("Mod \"$mod\" breaks with version ${breakingMod.version} of mod \"${breakingMod.modid}\", and version ${breakCand.version} was provided")
+                        throw ModResolutionError("Mod \"${mod.modid}\" breaks with version ${breakingMod.version} of mod \"${breakingMod.modid}\", and version ${breakCand.version} was provided")
                 }
             }
         }
@@ -78,6 +92,16 @@ class ModResolver {
             if (old != null && old.version != mod.version) {
                 this.logger.warn("Mod \"${mod.modid}\" was replaced after stage $stage of resolution(version: ${old.version} -> ${mod.version})")
             }
+        }
+
+        if (FelisLaunchEnvironment.printResolutionStages) {
+            val modSet = buildString {
+                appendLine()
+                for (mod in newSet) {
+                    appendLine(" - $mod")
+                }
+            }
+            this.logger.info("Printing current modset: $modSet")
         }
 
         return newSet

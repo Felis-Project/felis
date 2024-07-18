@@ -9,6 +9,7 @@ import net.peanuuutz.tomlkt.Toml
 import net.peanuuutz.tomlkt.getIntegerOrNull
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import kotlin.io.path.inputStream
 
 typealias Modid = String
 
@@ -60,19 +61,19 @@ class ModDiscoverer {
     }
 
     private fun createMods(cc: ContentCollection): ModDiscoveryResult {
-        if (cc.getContentUrl("mods.toml") != null) {
+        if (cc.getContentPath("mods.toml") != null) {
             this.logger.warn("Checked mod $cc contained a mods.toml file that is assumed to use the old metadata schema. Considering it a library.")
             this.logger.warn("To fix this, please change it's name to felis.mod.toml and use schema version 1")
             return ModDiscoveryResult.NoMods
         }
-        val urls = cc.getContentUrls(MOD_META)
-        if (urls.isEmpty()) return ModDiscoveryResult.NoMods
+        val paths = cc.getContentPaths(MOD_META)
+        if (paths.isEmpty()) return ModDiscoveryResult.NoMods
 
         val exceptions = mutableListOf<ModDiscoveryError>()
         val mods = mutableListOf<Mod>()
-        for (url in urls) {
+        for (path in paths) {
             val tomlString = try {
-                String(url.openStream().use { it.readAllBytes() })
+                String(path.inputStream().use { it.readAllBytes() })
             } catch (e: Exception) {
                 val top = ModDiscoveryError("Problem occured when reading mod candidate : $cc")
                 top.initCause(e)
@@ -83,13 +84,13 @@ class ModDiscoverer {
             try {
                 val metaToml = metadataToml.parseToTomlTable(tomlString)
                 if (metaToml.getIntegerOrNull("schema") != 1L) {
-                    exceptions += ModDiscoveryError("$url, must specify a valid schema version. Available versions are: 1")
+                    exceptions += ModDiscoveryError("$path, must specify a valid schema version. Available versions are: 1")
                     continue
                 }
                 val metadata = metadataToml.decodeFromString<ModMetadataExtended>(tomlString)
                 mods += Mod(cc, metadata)
             } catch (e: SerializationException) {
-                val top = ModDiscoveryError("Mod $cc had a malformatted $MOD_META file(at $url)")
+                val top = ModDiscoveryError("Mod $cc had a malformatted $MOD_META file(at $path)")
                 top.initCause(e)
                 exceptions += top
             }

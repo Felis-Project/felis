@@ -125,15 +125,17 @@ class TransformingClassLoader(
         return this.defineClass(name, bytes, 0, bytes.size, null)
     }
 
+    // TODO: Perhaps create a URL schema for this
+    // This needs a URLSchemeHandler to work since nested jars are not supported by the default 'jar' protocol.
     override fun findResource(name: String): URL? {
-        val targetUrl = this.contentCollection.getContentUrl(name)
-        if (targetUrl != null) return targetUrl
+        val targetUrl = this.contentCollection.getContentPath(name)
+        if (targetUrl != null) return targetUrl.toUri().toURL()
         this.logger.warn("Could not locate resource {}. Here be dragons!!!", name)
         return null
     }
 
     override fun findResources(name: String): Enumeration<URL> =
-        Collections.enumeration(this.contentCollection.getContentUrls(name))
+        Collections.enumeration(this.contentCollection.getContentPaths(name).map { it.toUri().toURL() })
 
     companion object {
         init {

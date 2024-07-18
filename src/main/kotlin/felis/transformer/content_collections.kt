@@ -2,7 +2,6 @@ package felis.transformer
 
 import felis.ModLoader
 import java.io.InputStream
-import java.net.URL
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -13,9 +12,6 @@ import kotlin.io.path.inputStream
 data class JarContentCollection(val path: Path) : ContentCollection {
     private val fs = FileSystems.newFileSystem(this.path)
 
-    override fun getContentUrl(name: String): URL? =
-        fs.getPath(name).let { if (Files.exists(it)) it.toUri().toURL() else null }
-
     override fun getContentPath(path: String): Path? =
         fs.getPath(path).let { if (it.exists()) it else null }
 
@@ -25,16 +21,11 @@ data class JarContentCollection(val path: Path) : ContentCollection {
     /**
      * We assume that a jar cannot contain multiple entries so we can safely do this
      */
-    override fun getContentUrls(name: String): Collection<URL> =
-        this.getContentUrl(name)?.let { listOf(it) } ?: emptyList()
+    override fun getContentPaths(path: String): List<Path> =
+        this.getContentPath(path)?.let { listOf(it) } ?: emptyList()
 }
 
 data class PathUnionContentCollection(val paths: List<Path>) : ContentCollection {
-    override fun getContentUrl(name: String): URL? = this.paths.firstNotNullOfOrNull {
-        val out = it / name
-        if (out.exists()) out.toUri().toURL() else null
-    }
-
     override fun getContentPath(path: String): Path? = this.paths.firstNotNullOfOrNull {
         val out = it / path
         if (out.exists()) out else null
@@ -42,12 +33,11 @@ data class PathUnionContentCollection(val paths: List<Path>) : ContentCollection
 
     override fun openStream(name: String): InputStream? = this.getContentPath(name)?.inputStream()
 
-    override fun getContentUrls(name: String): Collection<URL> = this.paths
+    override fun getContentPaths(path: String): List<Path> = this.paths
         .asSequence()
-        .map { it / name }
+        .map { it / path }
         .filter { it.exists() }
-        .map { it.toUri().toURL() }
-        .toCollection(mutableListOf())
+        .toList()
 }
 
 /**
@@ -56,12 +46,11 @@ data class PathUnionContentCollection(val paths: List<Path>) : ContentCollection
  */
 // TODO: Make this a class given to the TransformingClassLoader
 data object RootContentCollection : ContentCollection {
-    override fun getContentUrl(name: String): URL? = this.findPrioritized { it.getContentUrl(name) }
     override fun getContentPath(path: String): Path? = this.findPrioritized { it.getContentPath(path) }
     override fun openStream(name: String): InputStream? = this.findPrioritized { it.openStream(name) }
-    override fun getContentUrls(name: String): Collection<URL> = buildList {
-        addAll(ModLoader.discoverer.mods.flatMap { it.getContentUrls(name) })
-        addAll(ModLoader.discoverer.libs.flatMap { it.getContentUrls(name) })
+    override fun getContentPaths(path: String): List<Path> = buildList {
+        addAll(ModLoader.discoverer.mods.flatMap { it.getContentPaths(path) })
+        addAll(ModLoader.discoverer.libs.flatMap { it.getContentPaths(path) })
     }
 
     private inline fun <T> findPrioritized(getter: (ContentCollection) -> T?) =

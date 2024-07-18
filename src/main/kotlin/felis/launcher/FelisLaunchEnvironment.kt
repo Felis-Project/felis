@@ -23,5 +23,8 @@ object FelisLaunchEnvironment {
     val audit: Path? by OptionKey("felis.audit", DefaultValue.Value(null)) {
         Paths.get(it)
     }
+    val printResolutionStages by OptionKey("felis.print.res.stages", DefaultValue.Value(false)) {
+        it.toBooleanStrict()
+    }
     val logger: Logger = LoggerFactory.getLogger(FelisLaunchEnvironment::class.java)
 }

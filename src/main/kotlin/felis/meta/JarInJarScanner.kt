@@ -2,15 +2,29 @@ package felis.meta
 
 import felis.transformer.ContentCollection
 import felis.transformer.JarContentCollection
+import kotlinx.serialization.Serializable
+import net.peanuuutz.tomlkt.Toml
 
 class JarInJarScanner(private val others: List<Scanner>) : Scanner {
-    override fun offer(accept: (ContentCollection) -> Unit) {
-        val collections = mutableListOf<ContentCollection>()
-        this.others.forEach { it.offer(collections::add) }
+    companion object {
+        val toml = Toml { ignoreUnknownKeys = false }
+    }
 
-        for (cc in collections) {
-            val jars = cc.withStream("jars/jars.data") { String(it.readAllBytes()).lines() }?.filter { it.isNotBlank() } ?: continue
-            for (jar in jars) cc.getContentPath("jars/$jar")?.let { JarContentCollection(it) }?.let(accept)
+    @Serializable
+    data class JarData(val jars: List<String>)
+
+    override fun offer(accept: (ContentCollection) -> Unit) = this.others.forEach {
+        it.offer { cc -> this.walkAndOffer(cc, accept) }
+    }
+
+    private fun walkAndOffer(cc: ContentCollection, accept: (ContentCollection) -> Unit) {
+        val (jars) = cc.withStream("jars/jars.data.toml") { String(it.readAllBytes()) }
+            ?.let { toml.decodeFromString(JarData.serializer(), it) } ?: return
+
+        for (jar in jars) {
+            val jarCc = cc.getContentPath("jars/$jar")?.let { JarContentCollection(it) } ?: continue
+            accept(jarCc)
+            this.walkAndOffer(jarCc, accept)
         }
     }
 

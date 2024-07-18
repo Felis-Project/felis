@@ -18,17 +18,15 @@ import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
-import java.net.URL
 import java.nio.file.Path
 
 object TestLoaderPlugin : LoaderPluginEntrypoint {
     private val logger = LoggerFactory.getLogger(TestLoaderPlugin::class.java)
     override fun onLoaderInit() {
         val dummyCC = object : ContentCollection {
-            override fun getContentUrl(name: String): URL? = null
             override fun getContentPath(path: String): Path? = null
+            override fun getContentPaths(path: String): List<Path> = emptyList()
             override fun openStream(name: String): InputStream? = null
-            override fun getContentUrls(name: String): Collection<URL> = emptyList()
         }
 
         ModLoader.discoverer.walkScanner { accept ->
@@ -86,7 +84,9 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
                     version = Version.parse("0.0.1"),
                     name = "testmod",
                     dependencies = DependencyMetadata(
-                        breaks = listOf(SingleDependencyMetadata("testmod", Constraint.parse("<=1.0"))),
+                        breaks = listOf(
+                            SingleDependencyMetadata("testmod", Constraint.parse("<=1.0")),
+                        ),
                         requires = listOf(SingleDependencyMetadata("testmod", Constraint.parse(">=1.0.0")))
                     )
                 ).extended()
