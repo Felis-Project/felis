@@ -10,3 +10,4 @@ You know how no loaders allow you to modify their behavior to a huge extend?
 Yea, that's no more thanks to Felis.
 """
 slogan = "A modern mod loader for Minecraft"
+

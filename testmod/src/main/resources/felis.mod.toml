@@ -13,6 +13,22 @@ specifier = "io.github.testmod.MainTransformation"
 id = "loader_plugin"
 specifier = "io.github.testmod.TestLoaderPlugin"
 
+[[entrypoints]]
+id = "loader_plugin"
+specifier = "test.class.level.Kt::test"
+
+[[entrypoints]]
+id = "loader_plugin"
+specifier = "test.class.level.Kt::test2"
+
+[[entrypoints]]
+id = "loader_plugin"
+specifier = "test.class.level.Kt::testC"
+
+[[entrypoints]]
+id = "loader_plugin"
+specifier = "test.class.level.Kt::testC2"
+
 [[dependencies.requires]]
 modid = "felis"
 version = ">=1.5.0"
