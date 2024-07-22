@@ -65,8 +65,7 @@ class ModResolver {
 
         // always pick the newest valid version
         val modSetCandidate = modidToVersion
-            .mapValues { it.value.sortedDescending().take(1) }
-            .mapValues { it.value.single() }
+            .mapValues { it.value.max() }
             .map { ModInstance(it.key, it.value) }
 
         // check breaks

@@ -125,11 +125,11 @@ class TransformingClassLoader(
         return this.defineClass(name, bytes, 0, bytes.size, null)
     }
 
-    // TODO: Perhaps create a URL schema for this
+    // TODO: Perhaps create a URL stream handler for this to allow nested jars
     // This needs a URLSchemeHandler to work since nested jars are not supported by the default 'jar' protocol.
     override fun findResource(name: String): URL? {
-        val targetUrl = this.contentCollection.getContentPath(name)
-        if (targetUrl != null) return targetUrl.toUri().toURL()
+        val targetPath = this.contentCollection.getContentPath(name)
+        if (targetPath != null) return targetPath.toUri().toURL()
         this.logger.warn("Could not locate resource {}. Here be dragons!!!", name)
         return null
     }

@@ -27,8 +27,11 @@ object KotlinLanguageAdapter : LanguageAdapter {
                 )
             }
 
-            2 -> TODO()
-            else -> throw IllegalArgumentException("You cannot have :: move than once in a kotlin specifier")
+            2 -> {
+                TODO(":: specifiers are not implemented yet")
+            }
+
+            else -> throw IllegalArgumentException("You cannot have :: more than once in a kotlin specifier")
         }
     }
 }

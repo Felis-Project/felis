@@ -7,7 +7,6 @@ import org.objectweb.asm.tree.*
 import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 
-// TODO: Make this a different library
 open class AsmException(msg: String) : Exception(msg)
 class MethodNotFoundException(name: String, clazz: String) :
     AsmException("Method $name could not be found in target $clazz")

@@ -6,7 +6,10 @@ kotlin-coroutines = "1.8.0"
 kotlin-serialization = "1.9.23"
 dokka = "1.9.20"
 kotlin = "1.9.24"
+kotlin-json = "1.6.3"
 slf4j = "2.0.9" # matching the mc version
+atr = "1.1.0-alpha"
+semver = "2.0.0"
 
 [libraries]
 asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
@@ -14,6 +17,9 @@ asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
 tomlkt = { module = "net.peanuuutz.tomlkt:tomlkt", version.ref = "tomlkt" }
 kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+kotlin-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin-json"}
+atr = { module = "io.github.joemama:actually-tiny-remapper", version.ref = "atr"}
+semver = { module = "io.github.z4kn4fein:semver-jvm", version.ref = "semver"}
 
 [bundles]
 asm = ["asm-util", "asm-commons"]

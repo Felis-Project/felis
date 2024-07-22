@@ -29,9 +29,6 @@ import kotlin.io.path.pathString
  *
  * @author 0xJoeMama
  */
-// TODO/Missing Features for initial release
-// 2. Decouple loader internals to remove global variable usage within the loader itself(in progress)
-// 3. JarInJar
 @Suppress("MemberVisibilityCanBePrivate")
 object ModLoader {
     /**
@@ -124,7 +121,7 @@ object ModLoader {
         this.transformer = Transformer(this.discoverer, this.languageAdapter)
         this.discoverer.finish()
         // the class loader that uses everything in here to work
-        this.classLoader = TransformingClassLoader(this.transformer, RootContentCollection)
+        this.classLoader = TransformingClassLoader(this.transformer, RootContentCollection(this.discoverer))
         this.classLoader.ignored.apply {
             ignorePackage("kotlin")
             ignorePackage("kotlinx")
@@ -179,7 +176,6 @@ object ModLoader {
         this.logger.debug("game args: ${params.contentToString()}")
 
         // create a mod list.
-        // TODO: Perhaps make this prettier in the future
         val sw = StringWriter()
         sw.append("mods currently running: ")
         this.discoverer.mods.forEach {

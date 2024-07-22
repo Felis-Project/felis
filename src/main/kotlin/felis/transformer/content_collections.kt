@@ -1,6 +1,6 @@
 package felis.transformer
 
-import felis.ModLoader
+import felis.meta.ModDiscoverer
 import java.io.InputStream
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -40,20 +40,15 @@ data class PathUnionContentCollection(val paths: List<Path>) : ContentCollection
         .toList()
 }
 
-/**
- * Load content through a ContentCollection
- * Priority is: mods -> game -> libs
- */
-// TODO: Make this a class given to the TransformingClassLoader
-data object RootContentCollection : ContentCollection {
+class RootContentCollection(private val discoverer: ModDiscoverer) : ContentCollection {
     override fun getContentPath(path: String): Path? = this.findPrioritized { it.getContentPath(path) }
     override fun openStream(name: String): InputStream? = this.findPrioritized { it.openStream(name) }
     override fun getContentPaths(path: String): List<Path> = buildList {
-        addAll(ModLoader.discoverer.mods.flatMap { it.getContentPaths(path) })
-        addAll(ModLoader.discoverer.libs.flatMap { it.getContentPaths(path) })
+        addAll(discoverer.mods.flatMap { it.getContentPaths(path) })
+        addAll(discoverer.libs.flatMap { it.getContentPaths(path) })
     }
 
     private inline fun <T> findPrioritized(getter: (ContentCollection) -> T?) =
-        ModLoader.discoverer.mods.firstNotNullOfOrNull(getter)
-            ?: ModLoader.discoverer.libs.firstNotNullOfOrNull { getter(it) }
+        this.discoverer.mods.firstNotNullOfOrNull { getter(it) }
+            ?: this.discoverer.libs.firstNotNullOfOrNull { getter(it) }
 }

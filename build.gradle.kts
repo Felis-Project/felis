@@ -25,11 +25,11 @@ dependencies {
     api(libs.tomlkt)
     api(libs.kotlin.coroutines)
     api(kotlin("reflect"))
+    api(libs.semver)
+
     implementation(libs.slf4j)
-    // TODO: (chore) move dependencies in libs.versions.toml
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-    implementation("io.github.joemama:actually-tiny-remapper:1.1.0-alpha")
-    api("io.github.z4kn4fein:semver-jvm:2.0.0")
+    implementation(libs.kotlin.json)
+    implementation(libs.atr)
 }
 
 tasks.processResources {

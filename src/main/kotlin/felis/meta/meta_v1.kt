@@ -55,13 +55,13 @@ open class TransformationMetadata(
     val specifier: String
 )
 
-// TODO: Add custom data
 @Serializable
 open class ContactMetadata(
     val email: String? = null,
     val issueTracker: String? = null,
     val sources: String? = null,
-    val homepage: String? = null
+    val homepage: String? = null,
+    val other: Map<String, String> = emptyMap()
 )
 
 @Serializable
