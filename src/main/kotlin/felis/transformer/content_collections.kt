@@ -9,7 +9,7 @@ import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 
-data class JarContentCollection(val path: Path) : ContentCollection {
+class JarContentCollection(val path: Path) : ContentCollection {
     private val fs = FileSystems.newFileSystem(this.path)
 
     override fun getContentPath(path: String): Path? =
@@ -23,9 +23,11 @@ data class JarContentCollection(val path: Path) : ContentCollection {
      */
     override fun getContentPaths(path: String): List<Path> =
         this.getContentPath(path)?.let { listOf(it) } ?: emptyList()
+
+    override fun toString(): String = "${this.path} in ${this.path.fileSystem}"
 }
 
-data class PathUnionContentCollection(val paths: List<Path>) : ContentCollection {
+class PathUnionContentCollection(private val paths: List<Path>) : ContentCollection {
     override fun getContentPath(path: String): Path? = this.paths.firstNotNullOfOrNull {
         val out = it / path
         if (out.exists()) out else null
@@ -38,6 +40,8 @@ data class PathUnionContentCollection(val paths: List<Path>) : ContentCollection
         .map { it / path }
         .filter { it.exists() }
         .toList()
+
+    override fun toString(): String = "directories: ${this.paths}"
 }
 
 class RootContentCollection(private val discoverer: ModDiscoverer) : ContentCollection {

@@ -14,6 +14,9 @@ class ModResolver {
     data class ModInstance(val modid: Modid, val version: Version)
     class ModResolutionError(msg: String) : ModDiscoveryError(msg)
 
+    val size: Int
+        get() = this.graph.size
+
     fun record(mod: Mod) {
         val instance = ModInstance(mod.modid, mod.version)
         if (instance in this.graph) return
@@ -23,7 +26,7 @@ class ModResolver {
 
     fun resolve(oldSet: ModSet?): ModSet {
         this.stage++
-        this.logger.info("Stage $stage of resolution: resolving ${this.graph.size} mods")
+        this.logger.info("stage $stage of resolution: resolving ${this.graph.size} mods")
         // resolve requirements
         val modidToVersion: MutableMap<Modid, Set<Version>> = this.graph.keys.groupBy(ModInstance::modid)
             .mapValues { it.value.map(ModInstance::version).toHashSet() }

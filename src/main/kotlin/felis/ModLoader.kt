@@ -181,7 +181,7 @@ object ModLoader {
         sw.append("mods currently running: ")
         this.discoverer.mods.forEach {
             sw.appendLine()
-            sw.append("- ${it.modid}: ${it.metadata.version}")
+            sw.append("- $it")
         }
         this.logger.info(sw.toString())
 

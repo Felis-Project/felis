@@ -27,6 +27,7 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
             override fun getContentPath(path: String): Path? = null
             override fun getContentPaths(path: String): List<Path> = emptyList()
             override fun openStream(name: String): InputStream? = null
+            override fun toString(): String = "empty content collection for testing"
         }
 
         ModLoader.discoverer.walkScanner { accept ->
@@ -85,7 +86,7 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
                     name = "testmod",
                     dependencies = DependencyMetadata(
                         breaks = listOf(
-                            SingleDependencyMetadata("testmod", Constraint.parse("<=1.0")),
+                            SingleDependencyMetadata("testmod", Constraint.parse("<1.0")),
                         ),
                         requires = listOf(SingleDependencyMetadata("testmod", Constraint.parse(">=1.0.0")))
                     )

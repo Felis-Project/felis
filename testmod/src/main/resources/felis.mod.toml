@@ -4,10 +4,10 @@ modid = "testmod"
 version = "1.0.0"
 description = "test description"
 
-[[transformations]]
-name = "test transform"
-targets = ["net.minecraft.client.main.Main"]
-specifier = "io.github.testmod.MainTransformation"
+#[[transformations]]
+#name = "test transform"
+#targets = ["net.minecraft.client.main.Main"]
+#specifier = "io.github.testmod.MainTransformation"
 
 [[entrypoints]]
 id = "loader_plugin"

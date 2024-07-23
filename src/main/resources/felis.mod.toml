@@ -11,3 +11,14 @@ Yea, that's no more thanks to Felis.
 """
 slogan = "A modern mod loader for Minecraft"
 
+license = "MIT"
+
+[contact]
+issueTracker = "https://github.com/Felis-Project/felis/issues"
+sources = "https://github.com/Felis-Project/felis"
+homepage = "https://github.com/Felis-Project/"
+other = { discord = "https://discord.gg/fsvqcbpEWJ" }
+
+[[people.authors]]
+name = "0xJoeMama"
+
