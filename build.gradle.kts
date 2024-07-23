@@ -18,7 +18,7 @@ repositories {
 }
 
 group = "felis"
-version = "1.8.0-alpha"
+version = "1.8.1-alpha"
 
 dependencies {
     api(libs.bundles.asm)
@@ -80,7 +80,7 @@ publishing {
 }
 
 tasks.register("launcherJson", LauncherJsonTask::class.java) {
-    gameVersion.set("1.20.6")
+    gameVersion.set("1.21")
     repoMap.put("io.github.joemama:actually-tiny-remapper:1.1.0-alpha", felisRepo)
     ignore.add("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.0")
     ignore.add("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")

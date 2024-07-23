@@ -1,6 +1,6 @@
 {
-  "id": "1.20.6-Felis",
-  "inheritsFrom": "1.20.6",
+  "id": "1.21-Felis",
+  "inheritsFrom": "1.21",
   "type": "release",
   "libraries": [
     {
@@ -60,7 +60,7 @@
       "url": "https://repo.maven.apache.org/maven2/"
     },
     {
-      "name": "felis:felis:1.6.0-alpha",
+      "name": "felis:felis:1.8.1-alpha",
       "url": "https://repsy.io/mvn/0xjoemama/public/"
     }
   ],

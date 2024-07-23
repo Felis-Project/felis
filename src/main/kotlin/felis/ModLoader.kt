@@ -117,9 +117,10 @@ object ModLoader {
         )
         this.game = launcher.instantiate(this.side, gameArgs) // create the instance of the game
         this.discoverer.registerMod(this.game) // register the game
+        // resolve all mods detected and create the initial modset
+        this.discoverer.finish()
         // tool that transforms classes passed into it using registered Transformations
         this.transformer = Transformer(this.discoverer, this.languageAdapter)
-        this.discoverer.finish()
         // the class loader that uses everything in here to work
         this.classLoader = TransformingClassLoader(this.transformer, RootContentCollection(this.discoverer))
         this.classLoader.ignored.apply {
