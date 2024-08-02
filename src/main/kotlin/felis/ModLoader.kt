@@ -212,9 +212,7 @@ object ModLoader {
                     if (file.extension == "class") {
                         val name = file.pathString.substring(1).replace("/", ".").removeSuffix(".class")
                         val oldBytes = Files.newInputStream(file).use { it.readBytes() }
-                        val container = this.transformer.transform(ClassContainer.new(oldBytes, name))
-
-                        if (container.skip) continue
+                        val container = this.transformer.transform(ClassContainer.new(oldBytes, name)) ?: continue
 
                         val output = outputJar.getPath("/").resolve(file.pathString)
                         this.logger.trace("Auditing $name")

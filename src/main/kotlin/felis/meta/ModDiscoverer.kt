@@ -51,10 +51,6 @@ class ModDiscoverer {
     }
 
     fun finish() {
-//        if (this.modSet == null) this.perfcounter.printSummary { _, total, average ->
-//            this.logger.info("discovered ${this.resolver.size} mods in ${total}s. Average discovery time was ${average}ms")
-//        }
-
         this.modSet = this.resolver.resolve(modSet)
     }
 

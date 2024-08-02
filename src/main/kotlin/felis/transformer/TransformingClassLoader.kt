@@ -19,7 +19,7 @@ import java.util.*
  * You can ignore a class or package using [IgnoreList]
  *
  * @param transformer the root transformer used by this class loader
- * @param contentCollection the root content collection
+ * @param contentCollection a [RootContentCollection] instance used to read classes and also handle [URL]s with the 'cc' protocol
  * @author 0xJoeMama
  */
 class TransformingClassLoader(
@@ -27,7 +27,15 @@ class TransformingClassLoader(
     private val contentCollection: RootContentCollection
 ) : ClassLoader(null) {
     private val logger: Logger = LoggerFactory.getLogger(TransformingClassLoader::class.java)
+
+    /**
+     * Used to force classes to be loaded by the **system** class loader. Use with extreme caution and only as a last resort.
+     */
     val ignored = IgnoreList()
+
+    /**
+     * The public facing instance of [ClassInfoSet] for the currently running class environment.
+     */
     val classInfoSet = ClassInfoSet { name ->
         this.getResourceAsStream("${name.replace(".", "/")}.class")?.use(::ClassReader)?.let {
             ClassInfoSet.ClassInfo(
@@ -39,6 +47,10 @@ class TransformingClassLoader(
         } ?: throw ClassNotFoundException("Class $name was not found in current environment")
     }
 
+    /**
+     * @param name the JVM(dot separated, no special characters except $, no .class) name of the class to get
+     * @return a [ClassNode] as parsed initially to the class specified by the [name] parameter
+     */
     @Suppress("unused") // external API
     fun unmodifiedClassNode(name: String): ClassNode =
         this.getResourceAsStream(name.replace(".", "/") + ".class")
@@ -83,14 +95,6 @@ class TransformingClassLoader(
         clazz
     }
 
-    /**
-     * Attempts to load a class using this class loader.
-     * This applies transformations to the class, even if it is not a game class.
-     *
-     * @param name the class name of the class separated by '.'
-     *
-     *
-     */
     override fun findClass(name: String): Class<*>? {
         // normalize name
         val normalName = name.replace(".", "/") + ".class"
@@ -111,11 +115,11 @@ class TransformingClassLoader(
         */
 
         // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
-        return if (!newContainer.skip) this.defineClass(newContainer) else null
+        return if (newContainer != null) this.defineClass(newContainer) else null
     }
 
     /**
-     * Defines a class as per the container parameter
+     * Defines a class as specified by the container parameter
      *
      * @param container the [ClassContainer] with the data of the target class
      */

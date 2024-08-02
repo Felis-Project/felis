@@ -10,6 +10,7 @@ class Transformer(discoverer: ModDiscoverer, languageAdapter: LanguageAdapter) :
 
     // we have to store lazies to allow custom language adapters to work
     private val external: Map<String, List<Lazy<Transformation.Named>>> = createExternal(discoverer, languageAdapter)
+
     @Suppress("MemberVisibilityCanBePrivate")
     val ignored: IgnoreList = IgnoreList()
     private val internal = mutableListOf<Transformation>()
@@ -18,16 +19,20 @@ class Transformer(discoverer: ModDiscoverer, languageAdapter: LanguageAdapter) :
         this.internal.add(t)
     }
 
-    override fun transform(container: ClassContainer): ClassContainer {
+    override fun transform(container: ClassContainer): ClassContainer? {
         val name = container.name
         if (this.ignored.isIgnored(name)) return container
 
-        val newContainer = this.external[name]?.fold(container) { acc, lazy ->
+        val newContainer = this.external[name]?.fold(container as ClassContainer?) { acc, lazy ->
             this.logger.info("transforming $name with ${lazy.value.name}")
+            if (acc == null) return null
             lazy.value.transform(acc)
         } ?: container
 
-        return this.internal.fold(newContainer) { acc, fn -> fn.transform(acc) }
+        return this.internal.fold(newContainer as ClassContainer?) { acc, fn ->
+            if (acc == null) return null
+            fn.transform(acc)
+        }
     }
 
     private fun createExternal(

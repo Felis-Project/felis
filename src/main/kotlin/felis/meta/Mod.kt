@@ -2,6 +2,9 @@ package felis.meta
 
 import felis.transformer.ContentCollection
 
+/**
+ * A representation of a mod as a bundle of [ModMetadata] and a [ContentCollection]
+ */
 open class Mod(
     private val contentCollection: ContentCollection,
     @Suppress("MemberVisibilityCanBePrivate") // exposed API

@@ -5,15 +5,39 @@ import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
 
+/**
+ * A boxed version of a class, disallowing direct access to bytes.
+ * We disallow acces to bytes, since it allows us to skip class verification,
+ * because the only way the class can be modified is through asm API, which in itself is generally safe.
+ *
+ * One only has to interact with the top level superclass [ClassContainer] and not with the implementations.
+ *
+ * @author 0xJoeMama
+ */
 sealed class ClassContainer(protected val bytes: ByteArray, val name: String) {
     companion object {
+        /**
+         * Create a new instance of [ClassContainer]
+         * @param bytes a JVM ClassFile spec compatible byte array
+         * @param name the JVM name of the class(dot separated, no special characters except $, no .class)
+         *
+         * @return a [ClassContainer] instance
+         */
         fun new(bytes: ByteArray, name: String): ClassContainer = Bytes(bytes, name)
     }
 
+    // only useful for Java
+    /**
+     * Modify a [ClassNode] instance
+     */
     fun interface NodeAction : (ClassNode) -> Unit
+
+    /**
+     * Append a [ClassVisitor] on a visitor chain, as explained in [ClassContainer.visitor] using the provided instance of [ClassVisitor] as the delegate for the chain to work.
+     */
     fun interface VisitorFunction : (ClassVisitor) -> ClassVisitor
 
-    class Bytes internal constructor(bytes: ByteArray, name: String) : ClassContainer(bytes, name) {
+    private class Bytes(bytes: ByteArray, name: String) : ClassContainer(bytes, name) {
         override fun node(op: NodeAction): ClassContainer =
             NodeChain(mutableListOf(op), this.bytes, this.name)
 
@@ -23,7 +47,7 @@ sealed class ClassContainer(protected val bytes: ByteArray, val name: String) {
         override fun modifiedBytes(classInfoSet: ClassInfoSet): ByteArray = this.bytes
     }
 
-    class NodeChain internal constructor(
+    private class NodeChain(
         private val ops: MutableList<NodeAction>,
         bytes: ByteArray,
         name: String
@@ -48,7 +72,7 @@ sealed class ClassContainer(protected val bytes: ByteArray, val name: String) {
         }
     }
 
-    class VisistorChain internal constructor(
+    private class VisistorChain(
         private val ops: MutableList<VisitorFunction>,
         bytes: ByteArray,
         name: String
@@ -102,20 +126,54 @@ sealed class ClassContainer(protected val bytes: ByteArray, val name: String) {
         }
     }
 
-    class Writer(private val classInfoSet: ClassInfoSet) : ClassWriter(COMPUTE_FRAMES) {
+    /**
+     * A [ClassWriter] that operates using the [ClassInfoSet] for safely handling class inheritance instead of classloading classes.
+     * Technically speaking it is almost always better to use this to deserialize a class.
+     *
+     * @author 0xJoeMama
+     * @since May 2024
+     */
+    open class Writer(private val classInfoSet: ClassInfoSet) : ClassWriter(COMPUTE_FRAMES) {
         override fun getCommonSuperClass(type1: String, type2: String): String =
             this.classInfoSet.getCommonSuperClass(type1, type2)
     }
 
+    /**
+     * The internal name of this class.
+     */
     val internalName: String
         get() = this.name.replace(".", "/")
 
-    var skip: Boolean = false
-
+    /**
+     * Modify this class by getting a [ClassNode] and modifying it as a delegate.
+     */
     abstract fun node(op: NodeAction): ClassContainer
+
+    /**
+     * Append a new [ClassVisitor] on the current chain.
+     *
+     * Visitor chains consist of [ClassVisitor] who delegate action to each other. The initial [ClassVisitor] of the chain is an instance of [Writer] or a [ClassNode].
+     * Visitor chain modifications **always** happen before node modifications.
+     *
+     * @param op a function creating a [ClassVisitor] to be append to the current chain
+     */
     abstract fun visitor(op: VisitorFunction): ClassContainer
+
+    /**
+     * Modify the [bytes] of this class and return the modified version, on the class environment created by [ClassInfoSet]
+     *
+     * @param classInfoSet an instance of [ClassInfoSet] to denote the class environment
+     * @return the modified version of the current class
+     */
     abstract fun modifiedBytes(classInfoSet: ClassInfoSet): ByteArray
 
+    /**
+     * Visit this class with [visitor] using [opts].
+     * This visits the initial version of the class **not the current one**, because modifications are done lazily.
+     *
+     * @param visitor the [ClassVisitor] to visit
+     * @param opts options to pass into [ClassReader.accept]
+     */
     fun walk(visitor: ClassVisitor, opts: Int = ClassReader.EXPAND_FRAMES) = with(ClassReader(this.bytes)) {
         accept(visitor, opts)
     }

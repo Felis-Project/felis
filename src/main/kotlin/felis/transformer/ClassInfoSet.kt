@@ -1,5 +1,10 @@
 package felis.transformer
 
+/**
+ * A loader specific implementation of class hierarchy, meant to allow querying of class information while avoiding loading that class.
+ * Based primarily on [org.objectweb.asm.ClassReader]'s capability to not visit the whole class, but get header information.
+ * An average user shouldn't have to touch this and should instead just use [TransformingClassLoader.classInfoSet] when needed.
+ */
 class ClassInfoSet(private val provider: (String) -> ClassInfo) {
     data class ClassInfo(
         val name: String,

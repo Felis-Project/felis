@@ -14,9 +14,6 @@ class ModResolver {
     data class ModInstance(val modid: Modid, val version: Version)
     class ModResolutionError(msg: String) : ModDiscoveryError(msg)
 
-    val size: Int
-        get() = this.graph.size
-
     fun record(mod: Mod) {
         val instance = ModInstance(mod.modid, mod.version)
         if (instance in this.graph) return
