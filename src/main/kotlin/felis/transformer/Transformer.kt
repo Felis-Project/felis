@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory
 
 class Transformer(discoverer: ModDiscoverer, languageAdapter: LanguageAdapter) : Transformation {
     private val logger: Logger = LoggerFactory.getLogger(Transformer::class.java)
+
     // we have to store lazies to allow custom language adapters to work
     private val external: Map<String, List<Lazy<Transformation.Named>>> = createExternal(discoverer, languageAdapter)
     @Suppress("MemberVisibilityCanBePrivate")
@@ -17,26 +18,16 @@ class Transformer(discoverer: ModDiscoverer, languageAdapter: LanguageAdapter) :
         this.internal.add(t)
     }
 
-    override fun transform(container: ClassContainer) {
+    override fun transform(container: ClassContainer): ClassContainer {
         val name = container.name
+        if (this.ignored.isIgnored(name)) return container
 
-        if (this.ignored.isIgnored(name)) return
-        if (this.external.containsKey(name)) {
-            for (t in this.external.getOrDefault(name, emptyList())) {
-                this.logger.info("transforming $name with ${t.value.name}")
-                t.value.transform(container)
-                if (container.skip) {
-                    return
-                }
-            }
-        }
+        val newContainer = this.external[name]?.fold(container) { acc, lazy ->
+            this.logger.info("transforming $name with ${lazy.value.name}")
+            lazy.value.transform(acc)
+        } ?: container
 
-        for (t in this.internal) {
-            t.transform(container)
-            if (container.skip) {
-                return
-            }
-        }
+        return this.internal.fold(newContainer) { acc, fn -> fn.transform(acc) }
     }
 
     private fun createExternal(

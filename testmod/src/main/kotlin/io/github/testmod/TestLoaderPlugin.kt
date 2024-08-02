@@ -54,7 +54,7 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
             node.accept(this)
             toByteArray()
         }
-        ModLoader.classLoader.defineClass(ClassContainer(bytes, "test.class.Class"))
+        ModLoader.classLoader.defineClass(ClassContainer.new(bytes, "test.class.Class"))
         val cls = Class.forName("test.class.Class")
         val invoker = MethodHandles.publicLookup().findStatic(cls, "test", MethodType.methodType(Void.TYPE))
         invoker.invokeExact()

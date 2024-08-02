@@ -13,7 +13,6 @@ import felis.transformer.*
 import org.objectweb.asm.Type
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.StringWriter
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.nio.file.*
@@ -109,7 +108,9 @@ object ModLoader {
         this.discoverer.walkScanner(ClasspathScanner) // used primarily by development environments
         val directoryScanner = DirectoryScanner(mods)
         this.discoverer.walkScanner(directoryScanner) // used primarily by users
-        this.discoverer.walkScanner(JarInJarScanner(listOf(ClasspathScanner, directoryScanner)))
+        this.discoverer.walkScanner(  // used in both cases, to allow jar inclusion
+            JarInJarScanner(listOf(ClasspathScanner, directoryScanner))
+        )
         // tool used to create instances of abstract objects
         this.languageAdapter = DelegatingLanguageAdapter(
             KotlinLanguageAdapter,
@@ -137,7 +138,7 @@ object ModLoader {
             ignorePackageAbsolute("felis.transformer")
             ignorePackageAbsolute("felis.launcher")
             ignorePackageAbsolute("felis.language")
-            ignorePackageAbsolute("felis.util")
+            // ignorePackageAbsolute("felis.util")
         }
 
         // Register built-in transformations of the loader itself
@@ -151,11 +152,9 @@ object ModLoader {
 
         if (audit == null) {
             // start the game using the main class from above
-            this.call(
-                owner = this.game.mainClass,
+            this.startGame(
                 method = "main",
                 desc = Type.getMethodDescriptor(Type.getType(Void.TYPE), Type.getType(Array<String>::class.java)),
-                params = this.game.args
             )
         } else {
             // Audit game classes if that is what the user chose
@@ -166,26 +165,25 @@ object ModLoader {
     /**
      * Run a specific *main* method as specified by the Java Standard.
      *
-     * @param owner the name of the class that contains the method
      * @param method the name of the method. Usually this would be `main`
      * @param desc the descriptor of the method. Usually this would be `([Ljava/lang/String;)V`
-     * @param params the arguments passed into the method
      */
-    fun call(owner: String, method: String, desc: String, params: Array<String>) {
+    fun startGame(method: String, desc: String) {
         this.logger.info("starting game")
         this.logger.debug("target game jars: {}", this.game.path)
-        this.logger.debug("game args: ${params.contentToString()}")
+        this.logger.debug("game args: ${this.game.args.contentToString()}")
 
-        // create a mod list.
-        val sw = StringWriter()
-        sw.append("mods currently running: ")
-        this.discoverer.mods.forEach {
-            sw.appendLine()
-            sw.append("- $it")
+        // print the final mod set.
+        val modsetInfo = buildString {
+            append("mods currently running: ")
+            for (mod in discoverer.mods) {
+                appendLine()
+                append("- $mod")
+            }
         }
-        this.logger.info(sw.toString())
+        this.logger.info(modsetInfo)
 
-        val mainClass = this.classLoader.loadClass(owner)
+        val mainClass = this.classLoader.loadClass(this.game.mainClass)
         // using MethodLookup because technically speaking it's better that reflection
         val mainMethod = MethodHandles.publicLookup().`in`(mainClass).findStatic(
             mainClass,
@@ -193,9 +191,9 @@ object ModLoader {
             MethodType.fromMethodDescriptorString(desc, null)
         )
 
-        this.logger.debug("Calling $owner#main")
+        this.logger.debug("Calling ${this.game.mainClass}#main")
         // finally call the method
-        mainMethod.invoke(params)
+        mainMethod.invoke(this.game.args)
     }
 
     /**
@@ -214,8 +212,7 @@ object ModLoader {
                     if (file.extension == "class") {
                         val name = file.pathString.substring(1).replace("/", ".").removeSuffix(".class")
                         val oldBytes = Files.newInputStream(file).use { it.readBytes() }
-                        val container = ClassContainer(oldBytes, name)
-                        this.transformer.transform(container)
+                        val container = this.transformer.transform(ClassContainer.new(oldBytes, name))
 
                         if (container.skip) continue
 

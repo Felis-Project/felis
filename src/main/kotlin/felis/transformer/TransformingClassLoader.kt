@@ -1,21 +1,20 @@
 package felis.transformer
 
-import felis.util.ClassInfoSet
-import felis.util.PerfCounter
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InputStream
+import java.net.MalformedURLException
+import java.net.URI
 import java.net.URL
 import java.util.*
 
 /**
- * This class loader misuses the classloading delegation model to:
- * 1. Load mod classes
- * 2. Load game classes
- * 3. Load library classes
+ * This class loader misuses(intentional) the classloading delegation model to load most classes.
+ * By most I mean both library, mod and game classes, in no specific order.
+ *
  * The normal java classpath isn't used for anything other than ignored packages/classes.
  * You can ignore a class or package using [IgnoreList]
  *
@@ -25,14 +24,12 @@ import java.util.*
  */
 class TransformingClassLoader(
     private val transformer: Transformer,
-    private val contentCollection: ContentCollection
+    private val contentCollection: RootContentCollection
 ) : ClassLoader(null) {
     private val logger: Logger = LoggerFactory.getLogger(TransformingClassLoader::class.java)
-    private val classLoadPerfCounter = PerfCounter("Loaded {} classes in {}s. Average load time was {}ms", wait = true)
     val ignored = IgnoreList()
     val classInfoSet = ClassInfoSet { name ->
-        val internal = name.replace('.', '/')
-        this.getResourceAsStream("$internal.class")?.use(::ClassReader)?.let {
+        this.getResourceAsStream("${name.replace(".", "/")}.class")?.use(::ClassReader)?.let {
             ClassInfoSet.ClassInfo(
                 it.className,
                 it.superName,
@@ -40,12 +37,6 @@ class TransformingClassLoader(
                 it.access and Opcodes.ACC_INTERFACE != 0
             )
         } ?: throw ClassNotFoundException("Class $name was not found in current environment")
-    }
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun readContainer(name: String): ClassContainer? {
-        val normalName = name.replace(".", "/") + ".class"
-        return this.getResourceAsStream(normalName)?.use { ClassContainer(it.readAllBytes(), name) }
     }
 
     @Suppress("unused") // external API
@@ -62,36 +53,34 @@ class TransformingClassLoader(
         this.contentCollection.openStream(name) ?: getSystemResourceAsStream(name)
 
     override fun loadClass(name: String, resolve: Boolean): Class<*> = synchronized(getClassLoadingLock(name)) {
-        this.classLoadPerfCounter.timed {
-            // first see if it's a platform class
-            val clazz: Class<*> = try {
-                getPlatformClassLoader().loadClass(name)
-            } catch (e: ClassNotFoundException) {
-                // then check if it has specifically been ignored
-                // this currently only happens for the loader itself as well as the dependencies of the loader
-                if (this.ignored.isIgnored(name)) {
-                    // load it from the system in that case
-                    findSystemClass(name)
-                } else {
-                    // otherwise check if we have already loaded it
-                    var c: Class<*>? = this.findLoadedClass(name)
+        // first see if it's a platform class
+        val clazz: Class<*> = try {
+            getPlatformClassLoader().loadClass(name)
+        } catch (e: ClassNotFoundException) {
+            // then check if it has specifically been ignored
+            // this currently only happens for the loader itself as well as the dependencies of the loader
+            if (this.ignored.isIgnored(name)) {
+                // load it from the system in that case
+                this.findSystemClass(name)
+            } else {
+                // otherwise check if we have already loaded it
+                var c: Class<*>? = this.findLoadedClass(name)
+                if (c == null) {
+                    // if not try to load it now
+                    c = this.findClass(name)
                     if (c == null) {
-                        // if not try to load it now
-                        c = this.findClass(name)
-                        if (c == null) {
-                            // if we can't relay to system
-                            c = this.findSystemClass(name)
-                            // if system can't find it :concern:
-                            if (c == null) throw ClassNotFoundException("Couldn't find class $name")
-                        }
+                        // if we can't relay to system
+                        c = this.findSystemClass(name)
+                        // if system can't find it :concern:
+                        if (c == null) throw ClassNotFoundException("Couldn't find class $name")
                     }
-                    c
                 }
+                c
             }
-
-            if (resolve) resolveClass(clazz)
-            clazz
         }
+
+        if (resolve) resolveClass(clazz)
+        clazz
     }
 
     /**
@@ -99,43 +88,58 @@ class TransformingClassLoader(
      * This applies transformations to the class, even if it is not a game class.
      *
      * @param name the class name of the class separated by '.'
+     *
+     *
      */
     override fun findClass(name: String): Class<*>? {
-        // we attempt to read a container, if we can't we know nothing about the class
-        val classData = this.readContainer(name) ?: return null
+        // normalize name
+        val normalName = name.replace(".", "/") + ".class"
+        // Get the container through the RootContentCollection.
+        // If we cannot fetch it, this class is not under our jurisdiction(very rare case).
+        val container = this.getResourceAsStream(normalName)
+            ?.use { ClassContainer.new(it.readAllBytes(), name) }
+            ?: return null
+        // transform the class using the Transformer
+        val newContainer = this.transformer.transform(container)
 
-        this.transformer.transform(classData)
-        if (!classData.skip) {
-            // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
-            return this.defineClass(classData)
-        }
+        // The following code is the implementation of ProtectionDomain
+        // I honestly find ProtectionDomain kinda useless so it's been left out(since afaik it doesn't offer any gigantic benefits.
+        /*
+         val url = this.getResource(normalName)
+         val codeSource = CodeSource(url, arrayOf<CodeSigner>())
+         val prot = ProtectionDomain(codeSource, Permissions().also { it.add(AllPermission()) })
+        */
 
-        return null
+        // defineClass is like amazingly slow. We are talking half our class loading time. So call it only in this rare case
+        return if (!newContainer.skip) this.defineClass(newContainer) else null
     }
 
     /**
-     * Defines a class as provided by the container parameter
+     * Defines a class as per the container parameter
      *
      * @param container the [ClassContainer] with the data of the target class
      */
+    @Suppress("MemberVisibilityCanBePrivate")
     fun defineClass(container: ClassContainer): Class<*> {
-        // this parses the class and resolves all modifications to it
+        // this parses the class and resolves all modifications to it(slow)
         val bytes = container.modifiedBytes(this.classInfoSet)
-        // TODO: Setup CodeSource/ProtectionDomain
-        return this.defineClass(name, bytes, 0, bytes.size, null)
+        // this is also slow by default
+        return this.defineClass(container.name, bytes, 0, bytes.size, null)
     }
 
-    // TODO: Perhaps create a URL stream handler for this to allow nested jars
-    // This needs a URLSchemeHandler to work since nested jars are not supported by the default 'jar' protocol.
     override fun findResource(name: String): URL? {
         val targetPath = this.contentCollection.getContentPath(name)
-        if (targetPath != null) return targetPath.toUri().toURL()
-        this.logger.warn("Could not locate resource {}. Here be dragons!!!", name)
-        return null
+        try {
+            if (targetPath != null) return targetPath.toUri().toURL()
+        } catch (e: MalformedURLException) {
+            this.logger.warn("Could not locate resource $name in top level hierarchy. Here be dragons!!!")
+        }
+        // this is the only place where URLs are handed out
+        return URL.of(URI.create("cc:$name"), this.contentCollection)
     }
 
     override fun findResources(name: String): Enumeration<URL> =
-        Collections.enumeration(this.contentCollection.getContentPaths(name).map { it.toUri().toURL() })
+        Collections.enumeration(Collections.singletonList(this.findResource(name)))
 
     companion object {
         init {
@@ -143,5 +147,5 @@ class TransformingClassLoader(
         }
     }
 
-    override fun toString(): String = "transforming-class-loader"
+    override fun toString(): String = "Felis transforming classloader"
 }

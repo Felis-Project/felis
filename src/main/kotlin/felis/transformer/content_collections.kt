@@ -2,6 +2,9 @@ package felis.transformer
 
 import felis.meta.ModDiscoverer
 import java.io.InputStream
+import java.net.URL
+import java.net.URLConnection
+import java.net.URLStreamHandler
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -44,7 +47,7 @@ class PathUnionContentCollection(private val paths: List<Path>) : ContentCollect
     override fun toString(): String = "directories: ${this.paths}"
 }
 
-class RootContentCollection(private val discoverer: ModDiscoverer) : ContentCollection {
+class RootContentCollection(private val discoverer: ModDiscoverer) : URLStreamHandler(), ContentCollection {
     override fun getContentPath(path: String): Path? = this.findPrioritized { it.getContentPath(path) }
     override fun openStream(name: String): InputStream? = this.findPrioritized { it.openStream(name) }
     override fun getContentPaths(path: String): List<Path> = buildList {
@@ -55,4 +58,12 @@ class RootContentCollection(private val discoverer: ModDiscoverer) : ContentColl
     private inline fun <T> findPrioritized(getter: (ContentCollection) -> T?) =
         this.discoverer.mods.firstNotNullOfOrNull { getter(it) }
             ?: this.discoverer.libs.firstNotNullOfOrNull { getter(it) }
+
+    override fun openConnection(u: URL): URLConnection = CcUrlConnection(u, this)
+}
+
+class CcUrlConnection(url: URL, private val cc: ContentCollection) : URLConnection(url) {
+    override fun connect() = Unit
+    override fun getDoInput(): Boolean = true
+    override fun getInputStream(): InputStream = this.cc.openStream(this.url.path)!!
 }

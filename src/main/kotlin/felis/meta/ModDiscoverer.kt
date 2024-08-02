@@ -1,7 +1,6 @@
 package felis.meta
 
 import felis.transformer.ContentCollection
-import felis.util.PerfCounter
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.modules.SerializersModule
@@ -28,7 +27,6 @@ class ModDiscoverer {
     private val internalLibs = mutableListOf<ContentCollection>()
     private var modSet: ModSet? = null
     private val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
-    private val perfcounter = PerfCounter()
     private val resolver = ModResolver()
 
     // offered to outsiders as API
@@ -38,7 +36,7 @@ class ModDiscoverer {
 
     fun walkScanner(scanner: Scanner) {
         this.logger.info("mod discovery running for scanner $scanner")
-        scanner.offer { this.perfcounter.timed { this.consider(it) } }
+        scanner.offer { this.consider(it) }
     }
 
     fun registerMod(mod: Mod) = this.resolver.record(mod)
@@ -53,9 +51,9 @@ class ModDiscoverer {
     }
 
     fun finish() {
-        if (this.modSet == null) this.perfcounter.printSummary { _, total, average ->
-            this.logger.info("discovered ${this.resolver.size} mods in ${total}s. Average discovery time was ${average}ms")
-        }
+//        if (this.modSet == null) this.perfcounter.printSummary { _, total, average ->
+//            this.logger.info("discovered ${this.resolver.size} mods in ${total}s. Average discovery time was ${average}ms")
+//        }
 
         this.modSet = this.resolver.resolve(modSet)
     }

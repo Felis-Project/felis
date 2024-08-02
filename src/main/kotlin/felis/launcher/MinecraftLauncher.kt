@@ -3,7 +3,6 @@ package felis.launcher
 import felis.meta.ModMetadata
 import felis.side.Side
 import felis.transformer.JarContentCollection
-import felis.util.PerfCounter
 import io.github.joemama.atr.JarRemapper
 import io.github.joemama.atr.ProguardMappings
 import io.github.z4kn4fein.semver.Version
@@ -20,12 +19,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
+import kotlin.time.measureTimedValue
 
 
 class MinecraftLauncher : GameLauncher {
     private val logger = LoggerFactory.getLogger(MinecraftLauncher::class.java)
     private val remap: Boolean by OptionKey("felis.minecraft.remap", DefaultValue.Value(false), String::toBooleanStrict)
-    private val cachePath: Path by OptionKey("felis.minecraft.cache", DefaultValue.Value(Paths.get(".felis")), Paths::get)
+    private val cachePath: Path by OptionKey(
+        "felis.minecraft.cache",
+        DefaultValue.Value(Paths.get(".felis")),
+        Paths::get
+    )
 
     override fun instantiate(side: Side, args: Array<String>): GameInstance {
         val cp = System.getProperty("java.class.path").split(File.pathSeparator).map { Paths.get(it) }
@@ -46,12 +50,15 @@ class MinecraftLauncher : GameLauncher {
                     val minecraftJar = if (!remap) {
                         this.logger.debug("Not remapping. felis.remap was false or not specified")
                         cpEntry
-                    } else deobfuscate(cpEntry, versionId)
+                    } else this.deobfuscate(cpEntry, versionId)
 
                     return GameInstance(
                         JarContentCollection(minecraftJar),
                         ModMetadata(
-                            schema = 1, name = "Minecraft", modid = "minecraft", version = Version.parse(versionId, false)
+                            schema = 1,
+                            name = "Minecraft",
+                            modid = "minecraft",
+                            version = Version.parse(versionId, false)
                         ).extended(),
                         mainClass,
                         args
@@ -70,11 +77,9 @@ class MinecraftLauncher : GameLauncher {
 
         this.logger.info("Deobfuscating version $versionId as a remapped jar was not found in Felis' cache")
         this.logger.info("This launch will take longer than usual")
-        val perfCounter = PerfCounter()
-        val deobfuscatedJar = perfCounter.timed {
+        val (deobfuscatedJar, time) = measureTimedValue {
             val client = HttpClient.newHttpClient()
-            // find the version manifest
-            // TODO: Use the launcher's manifest in the future
+            // find the version manifest(we don't use the launcher manifest since we don't know that we are for certain running in the vanilla launcher)
             val manifestPath = this.cachePath.resolve("version_manifest_v2.json")
             if (!manifestPath.exists()) {
                 manifestPath.createParentDirectories()
@@ -109,12 +114,11 @@ class MinecraftLauncher : GameLauncher {
                 )
             }
             deobfuscated.createParentDirectories()
-            this.logger.info("Summoning ActuallyTinyRemapper")
+            this.logger.info("Summoning atr in attack mode")
             JarRemapper(obfuscatedJar).remap(ProguardMappings(mappingsPath.readText()), deobfuscated)
         }
-        perfCounter.printSummary { _, total, _ ->
-            this.logger.info("Finished deobfuscating Minecraft in ${total}s")
-        }
+
+        this.logger.info("Successfully deobfuscated minecraft in ${time}ms")
         return deobfuscatedJar
     }
 

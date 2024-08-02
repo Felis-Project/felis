@@ -1,4 +1,4 @@
-package felis.util
+package felis.transformer
 
 class ClassInfoSet(private val provider: (String) -> ClassInfo) {
     data class ClassInfo(
