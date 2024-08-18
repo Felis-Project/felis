@@ -12,7 +12,7 @@ import kotlin.io.path.inputStream
 
 typealias Modid = String
 
-class ModDiscoverer {
+class ModDiscoverer : ModSetUpdateListener {
     companion object {
         const val MOD_META = "felis.mod.toml"
         val metadataToml = Toml {
@@ -28,6 +28,7 @@ class ModDiscoverer {
     private var modSet: ModSet? = null
     private val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
     private val resolver = ModResolver()
+    private val modSetListeners = mutableListOf<ModSetUpdateListener>()
 
     // offered to outsiders as API
     val libs: Iterable<ContentCollection> = this.internalLibs.asIterable()
@@ -40,6 +41,10 @@ class ModDiscoverer {
     }
 
     fun registerMod(mod: Mod) = this.resolver.record(mod)
+    fun registerModSetHandler(handler: ModSetUpdateListener) {
+        this.modSetListeners.add(handler)
+        if (this.modSet != null) handler.onNewModSet(this.modSet!!)
+    }
 
     @Suppress("MemberVisibilityCanBePrivate") // public API
     fun consider(contentCollection: ContentCollection) {
@@ -52,6 +57,7 @@ class ModDiscoverer {
 
     fun finish() {
         this.modSet = this.resolver.resolve(modSet)
+        this.onNewModSet(modSet!!)
     }
 
     private fun createMods(cc: ContentCollection): ModDiscoveryResult {
@@ -98,4 +104,6 @@ class ModDiscoverer {
             ModDiscoveryResult.PartialMods(mods, exceptions)
         }
     }
+
+    override fun onNewModSet(modSet: ModSet) = this.modSetListeners.forEach { it.onNewModSet(modSet) }
 }

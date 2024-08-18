@@ -79,7 +79,5 @@ open class DependencyMetadata(
 
 @Serializable
 open class SingleDependencyMetadata(val modid: String, val version: Constraint) {
-    override fun toString(): String {
-        return "SingleDependencyMetadata(modid='$modid', version=$version)"
-    }
+    override fun toString(): String = "SingleDependencyMetadata(modid='$modid', version=$version)"
 }

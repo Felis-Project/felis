@@ -121,7 +121,10 @@ object ModLoader {
         // resolve all mods detected and create the initial modset
         this.discoverer.finish()
         // tool that transforms classes passed into it using registered Transformations
-        this.transformer = Transformer(this.discoverer, this.languageAdapter)
+        this.transformer = Transformer(this.languageAdapter)
+        // the transformer needs to be updated on mod changes
+        this.discoverer.registerModSetHandler(this.transformer)
+
         // the class loader that uses everything in here to work
         this.classLoader = TransformingClassLoader(this.transformer, RootContentCollection(this.discoverer))
         this.classLoader.ignored.apply {
@@ -138,7 +141,6 @@ object ModLoader {
             ignorePackageAbsolute("felis.transformer")
             ignorePackageAbsolute("felis.launcher")
             ignorePackageAbsolute("felis.language")
-            // ignorePackageAbsolute("felis.util")
         }
 
         // Register built-in transformations of the loader itself

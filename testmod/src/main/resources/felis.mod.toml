@@ -24,6 +24,11 @@ specifier = "test.class.level.Kt::testC"
 id = "loader_plugin"
 specifier = "test.class.level.Kt::testC2"
 
+#[[transformations]]
+#specifier = "felis.kittens.core.ApiInitKt"
+#targets = ["net.minecraft.client.main.Main"]
+#name = "test transformation(should fail(TM))"
+
 [[dependencies.requires]]
 modid = "felis"
 version = ">=1.5.0"

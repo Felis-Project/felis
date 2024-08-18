@@ -177,4 +177,6 @@ sealed class ClassContainer(protected val bytes: ByteArray, val name: String) {
     fun walk(visitor: ClassVisitor, opts: Int = ClassReader.EXPAND_FRAMES) = with(ClassReader(this.bytes)) {
         accept(visitor, opts)
     }
+
+    override fun toString(): String = this.name
 }

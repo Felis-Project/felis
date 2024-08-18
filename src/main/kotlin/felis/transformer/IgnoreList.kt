@@ -26,7 +26,5 @@ class IgnoreList {
         return this
     }
 
-    fun ignoreClass(name: String) {
-        this.classes.add(name)
-    }
+    fun ignoreClass(name: String) = this.classes.add(name)
 }

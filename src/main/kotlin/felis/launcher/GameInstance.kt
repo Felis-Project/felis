@@ -12,4 +12,3 @@ class GameInstance(
 ) : Mod(contentCollection, meta) {
     val path by contentCollection::path
 }
-
