@@ -45,12 +45,12 @@ class MinecraftLauncher : GameLauncher {
                     val version = Files.readString(cpJar.getPath("version.json")).let {
                         Json.decodeFromString<JsonObject>(it)
                     }
-                    // TODO: Handle server bundler here as well
+                    
                     val versionId = version["id"]!!.jsonPrimitive.content
                     val minecraftJar = if (!remap) {
                         this.logger.debug("Not remapping. felis.remap was false or not specified")
                         cpEntry
-                    } else this.deobfuscate(cpEntry, versionId)
+                    } else this.deobfuscate(cpEntry, versionId, side)
 
                     return GameInstance(
                         JarContentCollection(minecraftJar),
@@ -70,7 +70,7 @@ class MinecraftLauncher : GameLauncher {
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    private fun deobfuscate(obfuscatedJar: Path, versionId: String): Path {
+    private fun deobfuscate(obfuscatedJar: Path, versionId: String, side: Side): Path {
         val deobfuscated = this.cachePath.resolve("remapped").resolve("$versionId.jar")
         // if the deobfuscated file exists, we can return(we assume our remapping went good last time)
         if (deobfuscated.exists()) return deobfuscated
@@ -103,9 +103,13 @@ class MinecraftLauncher : GameLauncher {
                     HttpRequest.newBuilder(URI.create(versionUrl)).GET().build(),
                     BodyHandlers.ofInputStream()
                 ).body()
+                val targetMappings = when (side) {
+                    Side.CLIENT -> "client_mappings"
+                    Side.SERVER -> "server_mappings"
+                }
                 val version = iS.use { Json.decodeFromStream<JsonObject>(it) }
                 val mappingUrl = version.getValue("downloads").jsonObject
-                    .getValue("client_mappings").jsonObject
+                    .getValue(targetMappings).jsonObject
                     .getValue("url").jsonPrimitive.content
 
                 client.send(

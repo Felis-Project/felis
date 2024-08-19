@@ -73,7 +73,7 @@ class TransformingClassLoader(
             // this currently only happens for the loader itself as well as the dependencies of the loader
             if (this.ignored.isIgnored(name)) {
                 // load it from the system in that case
-                this.findSystemClass(name)
+                this.javaClass.classLoader.loadClass(name)
             } else {
                 // otherwise check if we have already loaded it
                 var c: Class<*>? = this.findLoadedClass(name)

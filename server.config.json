@@ -1,8 +1,6 @@
 {
-  "id": "1.21-Felis",
-  "inheritsFrom": "1.21",
-  "type": "release",
-  "libraries": [
+  "serverVersion": "1.21",
+  "additionalLibraries": [
     {
       "name": "io.github.joemama:actually-tiny-remapper:1.1.0-alpha",
       "url": "https://repsy.io/mvn/0xjoemama/public/"
@@ -63,14 +61,5 @@
       "name": "felis:felis:1.9.3-alpha",
       "url": "https://repsy.io/mvn/0xjoemama/public/"
     }
-  ],
-  "mainClass": "felis.MainKt",
-  "arguments": {
-    "jvm": [
-      "-Dfelis.side=CLIENT",
-      "-Dfelis.mods=mods",
-      "-Dfelis.minecraft.remap=true"
-    ],
-    "game": []
-  }
+  ]
 }

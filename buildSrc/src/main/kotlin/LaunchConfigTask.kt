@@ -9,11 +9,13 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
+import java.net.URI
+import java.net.URL
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
 @DisableCachingByDefault(because = "we dont wanna cache")
-abstract class LauncherJsonTask : DefaultTask() {
+abstract class LaunchConfigTask : DefaultTask() {
     @get:Input
     abstract val gameVersion: Property<String>
 
@@ -25,6 +27,9 @@ abstract class LauncherJsonTask : DefaultTask() {
 
     @get:Input
     abstract val additional: MapProperty<String, String>
+
+    @Serializable
+    data class FbhJson(val serverVersion: String, val additionalLibraries: List<Library>)
 
     @Serializable
     data class VersionJson(
@@ -74,19 +79,32 @@ abstract class LauncherJsonTask : DefaultTask() {
             )
         )
 
+        val fbh = FbhJson(
+            serverVersion = this.gameVersion.get(),
+            additionalLibraries = libs
+        )
+
         val libsFile = project.file("${gameVersion.get()}-Felis.json").toPath()
+        val json = Json {
+            prettyPrint = true
+            prettyPrintIndent = "  "
+        }
+
         Files.newBufferedWriter(
             libsFile,
             StandardOpenOption.WRITE,
             StandardOpenOption.TRUNCATE_EXISTING,
             StandardOpenOption.CREATE
         ).use { writer ->
-            val json = Json {
-                prettyPrint = true
-                prettyPrintIndent = "  "
-            }
-
             writer.write(json.encodeToString(version))
+        }
+        Files.newBufferedWriter(
+            libsFile.resolveSibling("server.config.json"),
+            StandardOpenOption.WRITE,
+            StandardOpenOption.TRUNCATE_EXISTING,
+            StandardOpenOption.CREATE
+        ).use { writer ->
+            writer.write(json.encodeToString(fbh))
         }
     }
 }

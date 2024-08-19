@@ -2,6 +2,7 @@ schema = 1
 name = "Felis Loader"
 modid = "felis"
 version = "${version}"
+license = "MIT"
 
 [description]
 description = """
@@ -10,8 +11,6 @@ You know how no loaders allow you to modify their behavior to a huge extend?
 Yea, that's no more thanks to Felis.
 """
 slogan = "A modern mod loader for Minecraft"
-
-license = "MIT"
 
 [contact]
 issueTracker = "https://github.com/Felis-Project/felis/issues"
