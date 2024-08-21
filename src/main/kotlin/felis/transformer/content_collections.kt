@@ -1,6 +1,9 @@
 package felis.transformer
 
+import felis.Timer
+import felis.launcher.GameInstance
 import felis.meta.ModDiscoverer
+import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.net.URL
 import java.net.URLConnection
@@ -28,6 +31,15 @@ class JarContentCollection(val path: Path) : ContentCollection {
         this.getContentPath(path)?.let { listOf(it) } ?: emptyList()
 
     override fun toString(): String = "${this.path} in ${this.path.fileSystem}"
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as JarContentCollection
+
+        return path == other.path
+    }
+
+    override fun hashCode(): Int = path.hashCode()
 }
 
 class PathUnionContentCollection(private val paths: List<Path>) : ContentCollection {
@@ -45,19 +57,44 @@ class PathUnionContentCollection(private val paths: List<Path>) : ContentCollect
         .toList()
 
     override fun toString(): String = "directories: ${this.paths}"
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as PathUnionContentCollection
+
+        return paths == other.paths
+    }
+
+    override fun hashCode(): Int = paths.hashCode()
 }
 
 class RootContentCollection(private val discoverer: ModDiscoverer) : URLStreamHandler(), ContentCollection {
-    override fun getContentPath(path: String): Path? = this.findPrioritized { it.getContentPath(path) }
-    override fun openStream(name: String): InputStream? = this.findPrioritized { it.openStream(name) }
-    override fun getContentPaths(path: String): List<Path> = buildList {
-        addAll(discoverer.mods.flatMap { it.getContentPaths(path) })
-        addAll(discoverer.libs.flatMap { it.getContentPaths(path) })
+    private val game = this.discoverer.mods.first { it is GameInstance }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(RootContentCollection::class.java)
+        private val timer = Timer.create("root content collection").also {
+            Timer.addAuto(it) { res ->
+                this.logger.info("Located ${res.count} files in the classpath in ${res.total}(${res.average} per file)")
+            }
+        }
     }
 
-    private inline fun <T> findPrioritized(getter: (ContentCollection) -> T?) =
-        this.discoverer.mods.firstNotNullOfOrNull { getter(it) }
+    override fun getContentPath(path: String): Path? = this.findPrioritized { it.getContentPath(path) }
+    override fun openStream(name: String): InputStream? = this.findPrioritized { it.openStream(name) }
+    override fun getContentPaths(path: String): List<Path> = timer.measure {
+        buildList {
+            addAll(discoverer.mods.flatMap { it.getContentPaths(path) })
+            addAll(discoverer.libs.flatMap { it.getContentPaths(path) })
+        }
+    }
+
+    private inline fun <T> findPrioritized(crossinline getter: (ContentCollection) -> T?) = timer.measure {
+        getter(this.game)
+            ?: this.discoverer.mods.firstNotNullOfOrNull { getter(it) }
             ?: this.discoverer.libs.firstNotNullOfOrNull { getter(it) }
+    }
 
     override fun openConnection(u: URL): URLConnection = CcUrlConnection(u, this)
 }

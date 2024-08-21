@@ -1,5 +1,6 @@
 package felis.meta
 
+import felis.Timer
 import felis.transformer.ContentCollection
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
@@ -29,6 +30,7 @@ class ModDiscoverer : ModSetUpdateListener {
     private val logger = LoggerFactory.getLogger(ModDiscoverer::class.java)
     private val resolver = ModResolver()
     private val modSetListeners = mutableListOf<ModSetUpdateListener>()
+    private val timer = Timer.create("mod discovery")
 
     // offered to outsiders as API
     val libs: Iterable<ContentCollection> = this.internalLibs.asIterable()
@@ -47,10 +49,15 @@ class ModDiscoverer : ModSetUpdateListener {
     }
 
     @Suppress("MemberVisibilityCanBePrivate") // public API
-    fun consider(contentCollection: ContentCollection) {
+    fun consider(contentCollection: ContentCollection) = this.timer.measure {
         val result = createMods(contentCollection)
 
-        if (result is ModDiscoveryResult.Mods) result.mods.forEach(this.resolver::record)
+        if (result is ModDiscoveryResult.Mods) {
+            for (mod in result.mods) {
+                this.resolver.record(mod)
+                this.internalLibs.remove(mod)
+            }
+        }
         if (result is ModDiscoveryResult.Error) result.failedMods.forEach(Exception::printStackTrace)
         if (result is ModDiscoveryResult.NoMods) this.internalLibs.add(contentCollection)
     }
@@ -58,6 +65,9 @@ class ModDiscoverer : ModSetUpdateListener {
     fun finish() {
         this.modSet = this.resolver.resolve(modSet)
         this.onNewModSet(modSet!!)
+        this.timer.end {
+            this.logger.info("Discovered ${it.count} mods/jars in ${it.total}. Average discovery time was ${it.average}")
+        }
     }
 
     private fun createMods(cc: ContentCollection): ModDiscoveryResult {

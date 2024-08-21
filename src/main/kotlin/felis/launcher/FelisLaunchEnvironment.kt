@@ -27,4 +27,6 @@ object FelisLaunchEnvironment {
         it.toBooleanStrict()
     }
     val logger: Logger = LoggerFactory.getLogger(FelisLaunchEnvironment::class.java)
+    override fun toString(): String =
+        "Felis environment: mods=${this.mods}, side=${this.side}, launcher=${this.launcher}, print-cp=${this.printClassPath}, print-res=${this.printResolutionStages}, audit=${this.audit}"
 }

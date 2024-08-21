@@ -5,6 +5,7 @@ import java.nio.file.Path
 
 /**
  * An object that can be traced by paths. Content refers to any file that can be queried from this object.
+ * All implementations of this are required to implement **equals**, **hashcode** and **toString**.
  *
  * @author 0xJoeMama
  */

@@ -1,5 +1,6 @@
 package felis.transformer
 
+import felis.Timer
 import felis.language.LanguageAdapter
 import felis.meta.ModSet
 import felis.meta.ModSetUpdateListener
@@ -13,23 +14,28 @@ class Transformer(private val languageAdapter: LanguageAdapter) : Transformation
     val ignored: IgnoreList = IgnoreList()
     private val internal = mutableListOf<Transformation>()
     private val external: MutableMap<String, List<LazyTransformation>> = mutableMapOf()
+    private val timer = Timer.create("transforming").also {
+        Timer.addAuto(it) { res ->
+            this.logger.info("Transformed a total of ${res.count} classes in ${res.total}. Average transformation time was ${res.average}")
+        }
+    }
 
     fun registerTransformation(t: Transformation) {
         this.internal.add(t)
     }
 
-    override fun transform(container: ClassContainer): ClassContainer? {
+    override fun transform(container: ClassContainer): ClassContainer? = this.timer.measure {
         val name = container.name
-        if (this.ignored.isIgnored(name)) return container
+        if (this.ignored.isIgnored(name)) return@measure container
 
         val newContainer = this.external[name]?.fold(container as ClassContainer?) { acc, t ->
             this.logger.info("transforming $name with ${t.source.name}")
-            if (acc == null) return null
+            if (acc == null) return@measure null
             t.transform(acc)
         } ?: container
 
-        return this.internal.fold(newContainer as ClassContainer?) { acc, fn ->
-            if (acc == null) return null
+        this.internal.fold(newContainer as ClassContainer?) { acc, fn ->
+            if (acc == null) return@measure null
             fn.transform(acc)
         }
     }

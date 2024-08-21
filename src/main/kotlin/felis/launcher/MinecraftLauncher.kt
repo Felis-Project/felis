@@ -45,7 +45,7 @@ class MinecraftLauncher : GameLauncher {
                     val version = Files.readString(cpJar.getPath("version.json")).let {
                         Json.decodeFromString<JsonObject>(it)
                     }
-                    
+
                     val versionId = version["id"]!!.jsonPrimitive.content
                     val minecraftJar = if (!remap) {
                         this.logger.debug("Not remapping. felis.remap was false or not specified")
