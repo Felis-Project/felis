@@ -1,8 +1,6 @@
 package felis.meta
 
-import io.github.z4kn4fein.semver.Version
 import io.github.z4kn4fein.semver.constraints.Constraint
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import net.peanuuutz.tomlkt.TomlElement
 import java.nio.file.Path
@@ -22,7 +20,7 @@ open class ModMetadata(
     override val version: Version,
     override val license: LicenseMetadata? = null,
     override val description: DescriptionMetadata? = null,
-    @Contextual override val icon: Path? = null,
+    @Serializable(with = PathSerializer::class) override val icon: Path? = null,
     override val contact: ContactMetadata? = null,
     override val people: Map<String, List<PersonMetadata>> = emptyMap(),
     override val entrypoints: List<EntrypointMetadata> = emptyList(),

@@ -5,7 +5,6 @@ import felis.side.Side
 import felis.transformer.JarContentCollection
 import io.github.joemama.atr.JarRemapper
 import io.github.joemama.atr.ProguardMappings
-import io.github.z4kn4fein.semver.Version
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
@@ -58,7 +57,7 @@ class MinecraftLauncher : GameLauncher {
                             schema = 1,
                             name = "Minecraft",
                             modid = "minecraft",
-                            version = Version.parse(versionId, false)
+                            version = MinecraftVersion.parse(versionId)
                         ).extended(),
                         mainClass,
                         args

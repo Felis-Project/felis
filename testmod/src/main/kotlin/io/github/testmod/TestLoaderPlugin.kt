@@ -65,7 +65,7 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
                 ModMetadata(
                     schema = 1,
                     modid = "testmod",
-                    version = Version.parse("1.2.0"),
+                    version = SemanticVersion("1.2.0"),
                     name = "testmod",
                     dependencies = DependencyMetadata(
                         requires = listOf(
@@ -82,7 +82,25 @@ object TestLoaderPlugin : LoaderPluginEntrypoint {
                 ModMetadata(
                     schema = 1,
                     modid = "ttr2",
-                    version = Version.parse("0.0.1"),
+                    version = SemanticVersion("0.0.1"),
+                    name = "testmod",
+                    dependencies = DependencyMetadata(
+                        breaks = listOf(
+                            SingleDependencyMetadata("testmod", Constraint.parse("<1.0")),
+                        ),
+                        requires = listOf(SingleDependencyMetadata("testmod", Constraint.parse(">=1.0.0")))
+                    )
+                ).extended()
+            )
+        )
+
+        ModLoader.discoverer.registerMod(
+            Mod(
+                dummyCC,
+                ModMetadata(
+                    schema = 1,
+                    modid = "ttr3",
+                    version = LexVersion("abcdefg.1"),
                     name = "testmod",
                     dependencies = DependencyMetadata(
                         breaks = listOf(

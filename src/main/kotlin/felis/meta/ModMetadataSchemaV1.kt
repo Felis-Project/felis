@@ -1,6 +1,5 @@
 package felis.meta
 
-import io.github.z4kn4fein.semver.Version
 import java.nio.file.Path
 
 /**

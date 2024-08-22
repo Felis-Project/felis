@@ -4,11 +4,9 @@ import felis.Timer
 import felis.transformer.ContentCollection
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.modules.SerializersModule
 import net.peanuuutz.tomlkt.Toml
 import net.peanuuutz.tomlkt.getIntegerOrNull
 import org.slf4j.LoggerFactory
-import java.nio.file.Path
 import kotlin.io.path.inputStream
 
 typealias Modid = String
@@ -19,9 +17,6 @@ class ModDiscoverer : ModSetUpdateListener {
         val metadataToml = Toml {
             ignoreUnknownKeys = true
             explicitNulls = false
-            serializersModule = SerializersModule {
-                contextual(Path::class, PathSerializer)
-            }
         }
     }
 

@@ -38,9 +38,11 @@ sealed interface Timer {
         }
 
         override fun end(action: (Result) -> Unit) {
-            action(Result(count, totalTime))
-            this.count = 0
-            this.totalTime = Duration.ZERO
+            if (this.count > 0) {
+                action(Result(count, totalTime))
+                this.count = 0
+                this.totalTime = Duration.ZERO
+            }
         }
     }
 

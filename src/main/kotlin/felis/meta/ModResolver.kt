@@ -1,7 +1,6 @@
 package felis.meta
 
 import felis.launcher.FelisLaunchEnvironment
-import io.github.z4kn4fein.semver.Version
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -55,10 +54,7 @@ class ModResolver {
             hash = modidToVersion.hashCode()
             for (leaf in leaves.keys) {
                 val versions = modidToVersion.getValue(leaf.modid)
-                if (versions.size != 1)
-                    throw ModResolutionError(
-                        "Multiple leaf versions: \"${leaf.modid}\" has multiple available versions($versions) with no way to specify which one is to be used"
-                    )
+                if (versions.size != 1) throw ModResolutionError("Multiple leaf versions: \"${leaf.modid}\" has multiple available versions($versions) with no way to specify which one is to be used")
                 this.resolve(leaf, modidToVersion)
             }
         } while (modidToVersion.values.all { it.size > 1 } && modidToVersion.hashCode() != hash)
@@ -74,8 +70,9 @@ class ModResolver {
                 if (breakingMod.modid == mod.modid) throw ModResolutionError("Mod \"${mod.modid}\" breaks on itself")
 
                 for (breakCand in modSetCandidate) {
-                    if (breakCand.modid == breakingMod.modid && breakingMod.version.isSatisfiedBy(breakCand.version))
-                        throw ModResolutionError("Mod \"${mod.modid}\" breaks with version ${breakingMod.version} of mod \"${breakingMod.modid}\", and version ${breakCand.version} was provided")
+                    if (breakCand.modid == breakingMod.modid &&
+                        breakCand.version.asSemVer()?.let { breakingMod.version.isSatisfiedBy(it) } == true
+                    ) throw ModResolutionError("Mod \"${mod.modid}\" breaks with version ${breakingMod.version} of mod \"${breakingMod.modid}\", and version ${breakCand.version} was provided")
                 }
             }
         }
@@ -122,7 +119,7 @@ class ModResolver {
             val validVersions = mutableSetOf<Version>()
             // find all compatible versions
             for (v in versions) {
-                if (dep.version.isSatisfiedBy(v)) validVersions += v
+                if (v.asSemVer()?.let { dep.version.isSatisfiedBy(it) } == true) validVersions += v
             }
 
             // if no valid versions exist we fail
