@@ -58,7 +58,7 @@
       "url": "https://repo.maven.apache.org/maven2/"
     },
     {
-      "name": "felis:felis:1.9.2-alpha",
+      "name": "felis:felis:1.10.0-alpha",
       "url": "https://repsy.io/mvn/0xjoemama/public/"
     }
   ]
