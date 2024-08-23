@@ -1,5 +1,6 @@
-package felis.launcher
+package felis.launcher.minecraft
 
+import felis.launcher.*
 import felis.meta.ModMetadata
 import felis.side.Side
 import felis.transformer.JarContentCollection
@@ -7,6 +8,8 @@ import io.github.joemama.atr.JarRemapper
 import io.github.joemama.atr.ProguardMappings
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.*
+import org.objectweb.asm.Type
+import org.objectweb.asm.commons.Method
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.net.URI
@@ -20,7 +23,6 @@ import java.nio.file.Paths
 import kotlin.io.path.*
 import kotlin.time.measureTimedValue
 
-
 class MinecraftLauncher : GameLauncher {
     private val logger = LoggerFactory.getLogger(MinecraftLauncher::class.java)
     private val remap: Boolean by OptionKey("felis.minecraft.remap", DefaultValue.Value(false), String::toBooleanStrict)
@@ -30,7 +32,7 @@ class MinecraftLauncher : GameLauncher {
         Paths::get
     )
 
-    override fun instantiate(side: Side, args: Array<String>): GameInstance {
+    override fun instantiate(side: Side): GameInstance {
         val cp = System.getProperty("java.class.path").split(File.pathSeparator).map { Paths.get(it) }
         val mainClass = when (side) {
             Side.CLIENT -> "net.minecraft.client.main.Main"
@@ -60,7 +62,10 @@ class MinecraftLauncher : GameLauncher {
                             version = MinecraftVersion.parse(versionId)
                         ).extended(),
                         mainClass,
-                        args
+                        Method(
+                            "main",
+                            Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Array<String>::class.java))
+                        )
                     )
                 }
             }

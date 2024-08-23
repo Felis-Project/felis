@@ -4,17 +4,15 @@ import felis.language.DelegatingLanguageAdapter
 import felis.language.JavaLanguageAdapter
 import felis.language.KotlinLanguageAdapter
 import felis.language.LanguageAdapter
-import felis.launcher.GameInstance
-import felis.launcher.GameLauncher
+import felis.launcher.*
+import felis.launcher.minecraft.MinecraftLauncher
 import felis.meta.*
 import felis.side.Side
 import felis.side.SideStrippingTransformation
 import felis.transformer.*
-import org.objectweb.asm.Type
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
+import java.io.File
 import java.nio.file.*
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.extension
@@ -36,6 +34,26 @@ object ModLoader {
     private val logger: Logger = LoggerFactory.getLogger(ModLoader::class.java)
 
     /**
+     * The **physical** side the loader is running on.
+     * Physical side, refers to the jar distribution used.
+     * [Side.CLIENT] means the client jar downloaded by the launcher.
+     * [Side.SERVER] means the server jar downloaded through the minecraft website
+     *
+     * @see Side for more info on sides
+     * @see SideStrippingTransformation for more info on what a specific [Side] entails
+     */
+    val side: Side by OptionKey("felis.side") { enumValueOf(it) }
+    val mods: List<Path> by OptionKey("felis.mods", DefaultValue.Value(emptyList())) {
+        it.split(File.pathSeparator).filter(String::isNotEmpty).map(Paths::get)
+    }
+    val launcher: GameLauncher by OptionKey("felis.launcher", DefaultValue.Value(MinecraftLauncher())) {
+        Class.forName(it).getDeclaredConstructor().newInstance() as GameLauncher
+    }
+    val printClassPath: Boolean by OptionKey("felis.print.cp", DefaultValue.Value(false), String::toBooleanStrict)
+    val audit: Path? by OptionKey("felis.audit", DefaultValue.Value(null), Paths::get)
+    val printResolutionStages by OptionKey("felis.print.res.stages", DefaultValue.Value(false), String::toBooleanStrict)
+
+    /**
      * A language adapter, that contains all other language adapters.
      * Used when trying to call an entrypoint.
      *
@@ -53,7 +71,7 @@ object ModLoader {
         private set
 
     /**
-     * A [JarContentCollection] referring to the game jar the loader is running on.
+     * The currently running [GameInstance]
      *
      * @see ContentCollection for more info on [ContentCollection]s
      */
@@ -77,36 +95,27 @@ object ModLoader {
         private set
 
     /**
-     * The **physical** side the loader is running on.
-     * Physical side, refers to the jar distribution used.
-     * [Side.CLIENT] means the client jar downloaded by the launcher.
-     * [Side.SERVER] means the server jar downloaded through the minecraft website
+     * Central location for all resources that can be offered from the launch path.
      *
-     * @see Side for more info on sides
-     * @see SideStrippingTransformation for more info on what a specific [Side] entails
+     * @see ContentCollection
      */
-    lateinit var side: Side
+    lateinit var contentCollection: RootContentCollection
         private set
 
-    var isAuditing = false
-        private set
+    var isAuditing = this.audit != null
 
     /**
      * Initialize this loader object.
      *
-     * @param mods a list of all jars this loader will attempt to load as mods. See [ModDiscoverer] for more info on how mods are loaded
-     * @param launcher the launcher for the game this loader is running
-     * @param side the **physical** side the loader is running on
-     * @param audit the path to output audited classes or null if we are not auditing
+     * @param args arguments used to start the game up
      */
-    fun initLoader(mods: List<Path>, side: Side, launcher: GameLauncher, gameArgs: Array<String>, audit: Path?) {
+    fun initLoader(args: Array<String>) {
         this.logger.info("starting mod loader")
-        this.side = side // the physical side we are running on
         this.discoverer = ModDiscoverer() // the object used to locate and initialize mods
 
         // run the default scanners
         this.discoverer.walkScanner(ClasspathScanner) // used primarily by development environments
-        val directoryScanner = DirectoryScanner(mods)
+        val directoryScanner = DirectoryScanner(this.mods)
         this.discoverer.walkScanner(directoryScanner) // used primarily by users
         this.discoverer.walkScanner(  // used in both cases, to allow jar inclusion
             JarInJarScanner(listOf(ClasspathScanner, directoryScanner))
@@ -116,7 +125,7 @@ object ModLoader {
             KotlinLanguageAdapter,
             JavaLanguageAdapter
         )
-        this.game = launcher.instantiate(this.side, gameArgs) // create the instance of the game
+        this.game = this.launcher.instantiate(this.side) // create the instance of the game
         this.discoverer.registerMod(this.game) // register the game
         // resolve all mods detected and create the initial modset
         this.discoverer.finish()
@@ -125,8 +134,9 @@ object ModLoader {
         // the transformer needs to be updated on mod changes
         this.discoverer.registerModSetHandler(this.transformer)
 
+        this.contentCollection = RootContentCollection(this.discoverer, this.game)
         // the class loader that uses everything in here to work
-        this.classLoader = TransformingClassLoader(this.transformer, RootContentCollection(this.discoverer))
+        this.classLoader = TransformingClassLoader(this.transformer, this.contentCollection)
         this.classLoader.ignored.apply {
             ignorePackage("kotlin")
             ignorePackage("kotlinx")
@@ -135,12 +145,12 @@ object ModLoader {
             ignorePackage("org.slf4j")
             ignorePackage("org.lwjgl")
             ignorePackage("io.github.z4kn4fein.semver")
+            ignorePackage("felis.meta")
+            ignorePackage("felis.side")
+            ignorePackage("felis.transformer")
+            ignorePackage("felis.launcher")
+            ignorePackage("felis.language")
             ignorePackageAbsolute("felis")
-            ignorePackageAbsolute("felis.meta")
-            ignorePackageAbsolute("felis.side")
-            ignorePackageAbsolute("felis.transformer")
-            ignorePackageAbsolute("felis.launcher")
-            ignorePackageAbsolute("felis.language")
         }
 
         // Register built-in transformations of the loader itself
@@ -151,30 +161,6 @@ object ModLoader {
 
         // the discoverer is done, since after plugins no one else can register scanners or mods
         this.discoverer.finish()
-
-        if (audit == null) {
-            // start the game using the main class from above
-            this.startGame(
-                method = "main",
-                desc = Type.getMethodDescriptor(Type.getType(Void.TYPE), Type.getType(Array<String>::class.java)),
-            )
-        } else {
-            // Audit game classes if that is what the user chose
-            this.auditTransformations(audit)
-        }
-    }
-
-    /**
-     * Run a specific *main* method as specified by the Java Standard.
-     *
-     * @param method the name of the method. Usually this would be `main`
-     * @param desc the descriptor of the method. Usually this would be `([Ljava/lang/String;)V`
-     */
-    fun startGame(method: String, desc: String) {
-        this.logger.info("starting game")
-        this.logger.debug("target game jars: {}", this.game.path)
-        this.logger.debug("game args: ${this.game.args.contentToString()}")
-
         // print the final mod set.
         val modsetInfo = buildString {
             append("mods currently running: ")
@@ -185,17 +171,14 @@ object ModLoader {
         }
         this.logger.info(modsetInfo)
 
-        val mainClass = this.classLoader.loadClass(this.game.mainClass)
-        // using MethodLookup because technically speaking it's better that reflection
-        val mainMethod = MethodHandles.publicLookup().`in`(mainClass).findStatic(
-            mainClass,
-            method,
-            MethodType.fromMethodDescriptorString(desc, null)
-        )
-
-        this.logger.debug("Calling ${this.game.mainClass}#main")
-        // finally call the method
-        mainMethod.invoke(this.game.args)
+        val audit = this.audit
+        if (audit == null) {
+            // start the game using the main class from above
+            this.game.start(this.logger, args)
+        } else {
+            // Audit game classes if that is what the user chose
+            this.auditTransformations(audit)
+        }
     }
 
     /**
@@ -253,7 +236,6 @@ object ModLoader {
      *
      * @return a list with the results of calling all the entrypoints
      */
-    @Suppress("MemberVisibilityCanBePrivate")
     inline fun <reified T, reified R> callEntrypoint(id: String, crossinline method: (T) -> R): List<R> =
         this.discoverer.mods
             .asSequence()

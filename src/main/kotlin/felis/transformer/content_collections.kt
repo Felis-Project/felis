@@ -69,9 +69,8 @@ class PathUnionContentCollection(private val paths: List<Path>) : ContentCollect
     override fun hashCode(): Int = paths.hashCode()
 }
 
-class RootContentCollection(private val discoverer: ModDiscoverer) : URLStreamHandler(), ContentCollection {
-    private val game = this.discoverer.mods.first { it is GameInstance }
-
+class RootContentCollection(private val discoverer: ModDiscoverer, private val game: GameInstance) : URLStreamHandler(),
+    ContentCollection {
     companion object {
         private val logger = LoggerFactory.getLogger(RootContentCollection::class.java)
         private val timer = Timer.create("root content collection").also {

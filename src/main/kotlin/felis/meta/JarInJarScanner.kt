@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 import net.peanuuutz.tomlkt.Toml
 import java.io.FileNotFoundException
 
-class JarInJarScanner(private val others: List<Scanner>) : Scanner {
+data class JarInJarScanner(private val others: List<Scanner>) : Scanner {
     companion object {
         val toml = Toml { ignoreUnknownKeys = false }
     }
@@ -29,6 +29,4 @@ class JarInJarScanner(private val others: List<Scanner>) : Scanner {
             this.walkAndOffer(jarCc, accept)
         }
     }
-
-    override fun toString(): String = "JarInJarScanner($others)"
 }

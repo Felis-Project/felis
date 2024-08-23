@@ -9,8 +9,8 @@ class OptionKey<T>(
     private val creator: (String) -> T
 ) : ReadOnlyProperty<Any, T> {
     override fun getValue(thisRef: Any, property: KProperty<*>): T =
-        System.getProperty(name)?.let(creator) ?: when (default) {
-            is DefaultValue.Value -> default.t
-            DefaultValue.NoValue -> throw IllegalStateException("Property $name must be specified or have a default value")
+        System.getProperty(this.name)?.let(this.creator) ?: when (this.default) {
+            is DefaultValue.Value -> this.default.t
+            DefaultValue.NoValue -> throw IllegalStateException("Property ${this.name} must be specified or have a default value")
         }
 }

@@ -17,7 +17,7 @@ object JavaLanguageAdapter : LanguageAdapter {
         Class.forName(specifier, true, ModLoader.classLoader).let {
             clazz.cast(it.getDeclaredConstructor().newInstance())
         }
-    }.onFailure { LanguageAdapterException(specifier).initCause(it) }
+    }
 }
 
 object KotlinLanguageAdapter : LanguageAdapter {
@@ -56,14 +56,13 @@ object KotlinLanguageAdapter : LanguageAdapter {
     private fun <T> buildProxy(member: KCallable<*>, instance: Any, clazz: Class<out T>): T = when (member) {
         is KProperty -> clazz.cast(member.getter.call(instance))
         is KFunction -> {
-            val proxy =
-                Proxy.newProxyInstance(ModLoader.classLoader, arrayOf(clazz)) { _, method, args ->
-                    if (method.parameterCount == member.parameters.size - 1 &&
-                        method.parameters.indices.all { method.parameters[it].type == member.parameters[it].type.javaType }
-                    ) {
-                        if (args == null) member.call(instance) else member.call(instance, *args)
-                    }
+            val proxy = Proxy.newProxyInstance(ModLoader.classLoader, arrayOf(clazz)) { _, method, args ->
+                if (method.parameterCount == member.parameters.size - 1 &&
+                    method.parameters.indices.all { method.parameters[it].type == member.parameters[it].type.javaType }
+                ) {
+                    if (args == null) member.call(instance) else member.call(instance, *args)
                 }
+            }
             clazz.cast(proxy)
         }
 

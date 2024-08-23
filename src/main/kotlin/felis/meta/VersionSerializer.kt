@@ -17,7 +17,7 @@ class VersionSerializer : KSerializer<Version> {
         return try {
             val version = io.github.z4kn4fein.semver.Version.parse(versionString, false)
             SemanticVersion(version)
-        } catch (e: VersionFormatException) { /* ignored */
+        } catch (e: VersionFormatException) {
             LexVersion(versionString)
         }
     }

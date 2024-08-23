@@ -1,4 +1,4 @@
-package felis.launcher
+package felis.launcher.minecraft
 
 import felis.meta.Version
 

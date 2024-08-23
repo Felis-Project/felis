@@ -141,6 +141,7 @@ sealed class ClassContainer(protected val bytes: ByteArray, val name: String) {
     /**
      * The internal name of this class.
      */
+    @Suppress("unused")
     val internalName: String
         get() = this.name.replace(".", "/")
 

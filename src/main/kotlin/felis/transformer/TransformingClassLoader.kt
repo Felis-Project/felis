@@ -1,5 +1,6 @@
 package felis.transformer
 
+import felis.ModLoader
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
@@ -37,14 +38,17 @@ class TransformingClassLoader(
      * The public facing instance of [ClassInfoSet] for the currently running class environment.
      */
     val classInfoSet = ClassInfoSet { name ->
-        this.getResourceAsStream("${name.replace(".", "/")}.class")?.use(::ClassReader)?.let {
-            ClassInfoSet.ClassInfo(
-                it.className,
-                it.superName,
-                it.interfaces.toMutableList(),
-                it.access and Opcodes.ACC_INTERFACE != 0
-            )
-        } ?: throw ClassNotFoundException("Class $name was not found in current environment")
+        this.getResourceAsStream("${name.replace(".", "/")}.class")
+            ?.use(::ClassReader)
+            ?.let {
+                ClassInfoSet.ClassInfo(
+                    it.className,
+                    it.superName,
+                    it.interfaces.toMutableList(),
+                    it.access and Opcodes.ACC_INTERFACE != 0
+                )
+            }
+            ?: throw ClassNotFoundException("Class $name was not found in current environment")
     }
 
     /**
@@ -59,10 +63,11 @@ class TransformingClassLoader(
                 val node = ClassNode()
                 it.accept(node, ClassReader.EXPAND_FRAMES)
                 node
-            } ?: throw ClassNotFoundException("Class $name could not be found in the current environment")
+            }
+            ?: throw ClassNotFoundException("Class $name could not be found in the current environment")
 
     override fun getResourceAsStream(name: String): InputStream? =
-        this.contentCollection.openStream(name) ?: getSystemResourceAsStream(name)
+        this.contentCollection.openStream(name) ?: ModLoader.javaClass.classLoader.getResourceAsStream(name)
 
     override fun loadClass(name: String, resolve: Boolean): Class<*> = synchronized(getClassLoadingLock(name)) {
         // first see if it's a platform class
@@ -73,7 +78,7 @@ class TransformingClassLoader(
             // this currently only happens for the loader itself as well as the dependencies of the loader
             if (this.ignored.isIgnored(name)) {
                 // load it from the system in that case
-                this.javaClass.classLoader.loadClass(name)
+                ModLoader.javaClass.classLoader.loadClass(name)
             } else {
                 // otherwise check if we have already loaded it
                 var c: Class<*>? = this.findLoadedClass(name)

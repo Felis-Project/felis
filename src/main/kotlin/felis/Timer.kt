@@ -18,7 +18,9 @@ sealed interface Timer {
         fun create(name: String) = if (this.showTimers) Impl(name) else NoOp
 
         init {
-            Runtime.getRuntime().addShutdownHook(Thread({ this.timers.forEach(Timer::end) }, "Timers"))
+            Runtime.getRuntime().addShutdownHook(Thread({
+                for ((timer, handler) in this.timers) timer.end(handler)
+            }, "Timers"))
         }
 
         fun addAuto(timer: Timer, handler: (Result) -> Unit) {

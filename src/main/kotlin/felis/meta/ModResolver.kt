@@ -1,6 +1,6 @@
 package felis.meta
 
-import felis.launcher.FelisLaunchEnvironment
+import felis.ModLoader
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -40,7 +40,7 @@ class ModResolver {
             throw ModResolutionError("No leaf mods found. This means that some mods have a circular dependency on one another and thus it's a good idea to check which ones they are.")
 
         var hash: Int
-        if (FelisLaunchEnvironment.printResolutionStages) {
+        if (ModLoader.printResolutionStages) {
             val leafString = buildString {
                 appendLine()
                 for (leaf in leaves.keys) {
@@ -81,16 +81,7 @@ class ModResolver {
             .mapNotNull { this.graph[it] }
             .let { ModSet(it) }
 
-        if (oldSet == null) return newSet
-
-        for (mod in newSet) {
-            val old = oldSet[mod.modid]
-            if (old != null && old.version != mod.version) {
-                this.logger.warn("Mod \"${mod.modid}\" was replaced after stage $stage of resolution(version: ${old.version} -> ${mod.version})")
-            }
-        }
-
-        if (FelisLaunchEnvironment.printResolutionStages) {
+        if (ModLoader.printResolutionStages) {
             val modSet = buildString {
                 appendLine()
                 for (mod in newSet) {
@@ -98,6 +89,16 @@ class ModResolver {
                 }
             }
             this.logger.info("Printing current modset: $modSet")
+        }
+
+
+        if (oldSet == null) return newSet
+
+        for (mod in newSet) {
+            val old = oldSet[mod.modid]
+            if (old != null && old.version != mod.version) {
+                this.logger.warn("Mod \"${mod.modid}\" was replaced after stage $stage of resolution(version: ${old.version} -> ${mod.version})")
+            }
         }
 
         return newSet

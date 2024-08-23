@@ -10,7 +10,6 @@ class LazyTransformation(val source: TransformationMetadata, private val languag
     }
 
     override fun transform(container: ClassContainer): ClassContainer? = this.t.transform(container)
-
     override fun toString(): String = this.source.toString()
     override fun hashCode(): Int = source.hashCode()
     override fun equals(other: Any?): Boolean = other is LazyTransformation && other.source == this.source

@@ -13,7 +13,7 @@ class Transformer(private val languageAdapter: LanguageAdapter) : Transformation
     @Suppress("MemberVisibilityCanBePrivate")
     val ignored: IgnoreList = IgnoreList()
     private val internal = mutableListOf<Transformation>()
-    private val external: MutableMap<String, List<LazyTransformation>> = mutableMapOf()
+    private val external: MutableMap<String, List<LazyTransformation>> = hashMapOf()
     private val timer = Timer.create("transforming").also {
         Timer.addAuto(it) { res ->
             this.logger.info("Transformed a total of ${res.count} classes in ${res.total}. Average transformation time was ${res.average}")
@@ -41,12 +41,13 @@ class Transformer(private val languageAdapter: LanguageAdapter) : Transformation
     }
 
     override fun onNewModSet(modSet: ModSet) {
-        val transformations = modSet.mods.asSequence().flatMap { it.transformations }.flatMap { t ->
-            t.targets.map { Pair(it, LazyTransformation(t, this.languageAdapter)) }
-        }.fold(mutableMapOf<String, MutableList<LazyTransformation>>()) { map, (target, t) ->
-            map.getOrPut(target) { mutableListOf() }.add(t)
-            map
-        }
+        val transformations = modSet.mods.asSequence()
+            .flatMap { it.transformations }
+            .flatMap { t -> t.targets.map { Pair(it, LazyTransformation(t, this.languageAdapter)) } }
+            .fold(hashMapOf<String, MutableList<LazyTransformation>>()) { map, (target, t) ->
+                map.getOrPut(target, ::mutableListOf).add(t)
+                map
+            }
 
         for ((target, ts) in transformations) {
             val current = this.external.getOrPut(target) { mutableListOf() }
