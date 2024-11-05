@@ -239,4 +239,15 @@ object ModLoader {
             .map { this.languageAdapter.createInstance(it.specifier, T::class.java).getOrThrow() }
             .map { method(it) }
             .toList()
+
+    fun <T> getEntrypoints(id: String, clazz: Class<T>): List<T> =
+        this.discoverer.mods
+            .asSequence()
+            .flatMap { it.entrypoints }
+            .filter { it.id == id }
+            .map { this.languageAdapter.createInstance(it.specifier, clazz).getOrThrow() }
+            .toList()
+
+    fun <T, R> callEntrypoint(id: String, clazz: Class<T>, method: (T) -> R): List<R> =
+        this.getEntrypoints(id, clazz).map(method)
 }
