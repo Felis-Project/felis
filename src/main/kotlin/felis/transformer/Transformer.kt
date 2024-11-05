@@ -13,10 +13,10 @@ class Transformer(private val languageAdapter: LanguageAdapter) : Transformation
     @Suppress("MemberVisibilityCanBePrivate")
     val ignored: IgnoreList = IgnoreList()
     private val internal = mutableListOf<Transformation>()
-    private val external: MutableMap<String, List<LazyTransformation>> = hashMapOf()
-    private val timer = Timer.create("transforming").also {
-        Timer.addAuto(it) { res ->
-            this.logger.info("Transformed a total of ${res.count} classes in ${res.total}. Average transformation time was ${res.average}")
+    private val external = hashMapOf<String, List<LazyTransformation>>()
+    private val timer = Timer.create("transforming").also { t ->
+        Timer.addAuto(t) {
+            this.logger.info("Transformed a total of ${it.count} classes in ${it.total}. Average transformation time was ${it.average}")
         }
     }
 

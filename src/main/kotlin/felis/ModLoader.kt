@@ -59,8 +59,17 @@ object ModLoader {
      *
      * @see LanguageAdapter
      */
-    lateinit var languageAdapter: DelegatingLanguageAdapter
-        private set
+    var languageAdapter = DelegatingLanguageAdapter(
+        KotlinLanguageAdapter,
+        JavaLanguageAdapter
+    )
+
+    /**
+     * The currently running [GameInstance]
+     *
+     * @see ContentCollection
+     */
+    val game: GameInstance = this.launcher.instantiate(this.side)
 
     /**
      * The discoverer created by the loader, loads mods passed through the command line.
@@ -68,14 +77,6 @@ object ModLoader {
      * @see ModDiscoverer for detail of the discovery process
      */
     lateinit var discoverer: ModDiscoverer
-        private set
-
-    /**
-     * The currently running [GameInstance]
-     *
-     * @see ContentCollection for more info on [ContentCollection]s
-     */
-    lateinit var game: GameInstance
         private set
 
     /**
@@ -120,12 +121,6 @@ object ModLoader {
         this.discoverer.walkScanner(  // used in both cases, to allow jar inclusion
             JarInJarScanner(listOf(ClasspathScanner, directoryScanner))
         )
-        // tool used to create instances of abstract objects
-        this.languageAdapter = DelegatingLanguageAdapter(
-            KotlinLanguageAdapter,
-            JavaLanguageAdapter
-        )
-        this.game = this.launcher.instantiate(this.side) // create the instance of the game
         this.discoverer.registerMod(this.game) // register the game
         // resolve all mods detected and create the initial modset
         this.discoverer.finish()
@@ -133,7 +128,7 @@ object ModLoader {
         this.transformer = Transformer(this.languageAdapter)
         // the transformer needs to be updated on mod changes
         this.discoverer.registerModSetHandler(this.transformer)
-
+        // root location of all accessible loading path files
         this.contentCollection = RootContentCollection(this.discoverer, this.game)
         // the class loader that uses everything in here to work
         this.classLoader = TransformingClassLoader(this.transformer, this.contentCollection)

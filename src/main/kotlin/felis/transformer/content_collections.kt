@@ -95,7 +95,9 @@ class RootContentCollection(private val discoverer: ModDiscoverer, private val g
             ?: this.discoverer.libs.firstNotNullOfOrNull { getter(it) }
     }
 
-    override fun openConnection(u: URL): URLConnection = CcUrlConnection(u, this)
+    override fun openConnection(u: URL): URLConnection = if (u.protocol == "cc") {
+        CcUrlConnection(u, this)
+    } else throw IllegalArgumentException("Only cc protocol URLs can be handled by the RootContentCollection")
 }
 
 class CcUrlConnection(url: URL, private val cc: ContentCollection) : URLConnection(url) {
