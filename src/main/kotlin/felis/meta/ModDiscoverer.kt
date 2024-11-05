@@ -37,7 +37,10 @@ class ModDiscoverer : ModSetUpdateListener {
         scanner.offer { this.consider(it) }
     }
 
-    fun registerMod(mod: Mod) = this.resolver.record(mod)
+    fun registerMod(mod: Mod) {
+        if (mod in this.internalLibs) this.internalLibs.remove(mod)
+        this.resolver.record(mod)
+    }
     fun registerModSetHandler(handler: ModSetUpdateListener) {
         this.modSetListeners.add(handler)
         if (this.modSet != null) handler.onNewModSet(this.modSet!!)

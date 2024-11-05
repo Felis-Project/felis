@@ -126,7 +126,7 @@ class MinecraftLauncher : GameLauncher {
             JarRemapper(obfuscatedJar).remap(ProguardMappings(mappingsPath.readText()), deobfuscated)
         }
 
-        this.logger.info("Successfully deobfuscated minecraft in ${time}ms")
+        this.logger.info("Successfully deobfuscated minecraft in $time")
         return deobfuscatedJar
     }
 
